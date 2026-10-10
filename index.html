@@ -51,6 +51,13 @@
   #lists .li .t small { display: block; color: var(--dim); }
   #lists .x { flex: none; background: none; border: 0; color: var(--dim); font-size: 18px; padding: 4px 8px; font-weight: 400; }
   #lists .x:hover { color: #ff6b6b; }
+  .ch:focus, button:focus-visible, select:focus-visible, input:focus-visible { outline: 3px solid var(--acc); outline-offset: -3px; }
+  body.fs header, body.fs aside, body.fs #bar { display: none; }
+  body.fs main { display: block; }
+  body.fs #stage { position: fixed; inset: 0; z-index: 10; }
+  body.fs video { width: 100%; height: 100%; aspect-ratio: auto; flex: 1; }
+  #fsx { position: absolute; top: 10px; right: 10px; z-index: 11; display: none; background: #000a; color: #fff; border-color: #fff4; }
+  body.fs #fsx { display: block; }
   #toast { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); max-width: 80%; padding: 8px 14px; border-radius: 20px; background: #000b; color: #fff; pointer-events: none; opacity: 0; transition: opacity .2s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   #toast.show { opacity: 1; }
   @media (max-width: 760px) {
@@ -86,9 +93,11 @@
     <div id="list"><div class="empty">Wklej link do playlisty i kliknij „Wczytaj”.</div></div>
   </aside>
   <section id="stage">
-    <video id="v" controls playsinline autoplay></video>
+    <video id="v" controls controlsList="nofullscreen" playsinline autoplay></video>
+    <button id="fsx" class="ghost" title="Wyjdź z pełnego ekranu">✕</button>
     <div id="toast"></div>
-    <div id="bar"><div id="info">Wybierz kanał z listy.</div><button id="pip" class="ghost" hidden>Obraz w obrazie</button></div>
+    <div id="bar"><div id="info">Wybierz kanał z listy.</div><button id="pip" class="ghost" hidden>Obraz w obrazie</button>
+    <button id="fs" class="ghost" title="Pełny ekran">⛶</button></div>
   </section>
 </main>
 <input id="file" type="file" accept=".m3u,.m3u8,.txt,.json" hidden>
@@ -239,6 +248,8 @@ function row(c, sortable, idx) {
   d.className = 'ch' + (current && current.key === c.key ? ' on' : '');
   d.innerHTML = (sortable ? '<span class="grip" title="Przeciągnij, aby zmienić kolejność">⋮⋮</span>' : '') +
     `<img loading="lazy" alt="" src="${esc(c.logo || '')}" onerror="this.style.visibility='hidden'"><span class="n">${esc(c.name)}</span><button class="star${isFav(c) ? ' on' : ''}">${isFav(c) ? '★' : '☆'}</button>`;
+  d.tabIndex = 0;
+  d.onkeydown = e => { if (e.target === d && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); play(c); } };
   d.onclick = () => play(c);
   d.querySelector('.star').onclick = e => { e.stopPropagation(); toggleFav(c); };
   if (sortable) { d.dataset.idx = idx; const g = d.querySelector('.grip'); g.onpointerdown = e => startDrag(e, d); g.onclick = e => e.stopPropagation(); }
@@ -355,6 +366,26 @@ matchMedia('(orientation: landscape)').addEventListener('change', e => {
   if (e.matches) { const st = $('stage'); st.requestFullscreen && st.requestFullscreen({ navigationUI: 'hide' }).catch(() => {}); }
   else if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
 });
+
+/* ---------- pełny ekran (przycisk, Esc, Wstecz w aplikacji) ---------- */
+function setFs(on) {
+  document.body.classList.toggle('fs', on);
+  const st = $('stage');
+  if (on) { st.requestFullscreen && st.requestFullscreen().catch(() => {}); }
+  else if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+}
+$('fs').onclick = () => setFs(!document.body.classList.contains('fs'));
+$('fsx').onclick = () => setFs(false);
+document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement) document.body.classList.remove('fs'); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && document.body.classList.contains('fs')) setFs(false); });
+try {
+  const App = window.Capacitor && Capacitor.Plugins && Capacitor.Plugins.App;
+  if (App) App.addListener('backButton', () => {
+    if (document.body.classList.contains('fs')) setFs(false);
+    else if (!$('lists').hidden) $('lists').hidden = true;
+    else App.exitApp();
+  });
+} catch {}
 
 /* ---------- obraz w obrazie ---------- */
 const pipBtn = $('pip'), vid = $('v');
