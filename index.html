@@ -18,6 +18,11 @@
   input, select, button { font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; }
   button { cursor: pointer; background: var(--acc); border-color: var(--acc); color: #04121f; font-weight: 600; }
   button.ghost { background: var(--bg); color: var(--text); border-color: var(--line); font-weight: 400; }
+  @media (max-width: 760px) {
+    header { flex-wrap: wrap; }
+    header input { flex: 1 1 100%; }
+    header button { flex: 1 1 0; padding: 9px 6px; font-size: 14px; }
+  }
   main { flex: 1; display: grid; grid-template-columns: minmax(300px, 380px) minmax(0, 1fr); min-height: 0; min-width: 0; }
   aside { display: flex; flex-direction: column; border-right: 1px solid var(--line); min-height: 0; min-width: 0; background: var(--panel); }
   .filters { display: flex; gap: 8px; padding: 10px; }
@@ -93,7 +98,7 @@
     <div id="list"><div class="empty">Wklej link do playlisty i kliknij „Wczytaj”.</div></div>
   </aside>
   <section id="stage">
-    <video id="v" controls controlsList="nofullscreen" playsinline autoplay></video>
+    <video id="v" controls controlsList="nofullscreen" playsinline autoplay poster="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"></video>
     <button id="fsx" class="ghost" title="Wyjdź z pełnego ekranu">✕</button>
     <div id="toast"></div>
     <div id="bar"><div id="info">Wybierz kanał z listy.</div><button id="pip" class="ghost" hidden>Obraz w obrazie</button>
@@ -363,20 +368,20 @@ document.addEventListener('keydown', e => {
 /* ---------- pełny ekran po obróceniu telefonu ---------- */
 matchMedia('(orientation: landscape)').addEventListener('change', e => {
   if (!document.body.classList.contains('playing') || !matchMedia('(pointer: coarse)').matches) return;
-  if (e.matches) { const st = $('stage'); st.requestFullscreen && st.requestFullscreen({ navigationUI: 'hide' }).catch(() => {}); }
-  else if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+  setFs(e.matches);                       // poziomo = pełny ekran, pionowo = powrót do listy
 });
 
 /* ---------- pełny ekran (przycisk, Esc, Wstecz w aplikacji) ---------- */
 function setFs(on) {
   document.body.classList.toggle('fs', on);
+  try { window.AndroidApp && AndroidApp.immersive(on); } catch {}
   const st = $('stage');
   if (on) { st.requestFullscreen && st.requestFullscreen().catch(() => {}); }
   else if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
 }
 $('fs').onclick = () => setFs(!document.body.classList.contains('fs'));
 $('fsx').onclick = () => setFs(false);
-document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement) document.body.classList.remove('fs'); });
+document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement) { document.body.classList.remove('fs'); try { window.AndroidApp && AndroidApp.immersive(false); } catch {} } });
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && document.body.classList.contains('fs')) setFs(false); });
 try {
   const App = window.Capacitor && Capacitor.Plugins && Capacitor.Plugins.App;
