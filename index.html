@@ -7,15 +7,16 @@
 <style>
   :root { --bg:#111418; --panel:#1b2027; --line:#2a313b; --text:#e8ecf1; --dim:#8d97a5; --acc:#3da9fc; --star:#ffc933; }
   * { box-sizing: border-box; }
-  html, body { height: 100%; margin: 0; }
+  html, body { height: 100%; margin: 0; overflow-x: hidden; }
+  body { height: 100dvh; }
   body { background: var(--bg); color: var(--text); font: 15px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif; display: flex; flex-direction: column; }
   header { display: flex; gap: 8px; padding: 10px; background: var(--panel); border-bottom: 1px solid var(--line); }
   header input { flex: 1; min-width: 0; }
   input, select, button { font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; }
   button { cursor: pointer; background: var(--acc); border-color: var(--acc); color: #04121f; font-weight: 600; }
   button.ghost { background: var(--bg); color: var(--text); border-color: var(--line); font-weight: 400; }
-  main { flex: 1; display: grid; grid-template-columns: minmax(300px, 380px) 1fr; min-height: 0; }
-  aside { display: flex; flex-direction: column; border-right: 1px solid var(--line); min-height: 0; background: var(--panel); }
+  main { flex: 1; display: grid; grid-template-columns: minmax(300px, 380px) minmax(0, 1fr); min-height: 0; min-width: 0; }
+  aside { display: flex; flex-direction: column; border-right: 1px solid var(--line); min-height: 0; min-width: 0; background: var(--panel); }
   .filters { display: flex; gap: 8px; padding: 10px; }
   .filters select, .filters input { flex: 1; min-width: 0; }
   #list { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
@@ -27,12 +28,14 @@
   .star { background: none; border: 0; color: var(--dim); font-size: 22px; padding: 0 4px; line-height: 1; font-weight: 400; }
   .star.on { color: var(--star); }
   #stage { display: flex; flex-direction: column; min-width: 0; background: #000; }
-  video { width: 100%; flex: 1; min-height: 0; background: #000; }
-  #info { padding: 8px 12px; background: var(--panel); color: var(--dim); min-height: 38px; }
+  video { width: 100%; max-width: 100%; flex: 1; min-height: 0; min-width: 0; background: #000; }
+  #bar { display: flex; align-items: center; gap: 8px; padding: 6px 12px; background: var(--panel); min-height: 46px; }
+  #info { flex: 1; min-width: 0; color: var(--dim); overflow: hidden; text-overflow: ellipsis; }
+  #pip { flex: none; padding: 7px 12px; }
   #info b { color: var(--text); }
   .empty { padding: 20px; color: var(--dim); text-align: center; }
   @media (max-width: 760px) {
-    main { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
+    main { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); }
     #stage { order: -1; }
     video { aspect-ratio: 16/9; flex: none; }
     aside { border-right: 0; }
@@ -56,7 +59,7 @@
   </aside>
   <section id="stage">
     <video id="v" controls playsinline autoplay></video>
-    <div id="info">Wybierz kanał z listy.</div>
+    <div id="bar"><div id="info">Wybierz kanał z listy.</div><button id="pip" class="ghost" hidden>Obraz w obrazie</button></div>
   </section>
 </main>
 <input id="file" type="file" accept=".m3u,.m3u8,.txt,.json" hidden>
@@ -210,6 +213,17 @@ $('load').onclick = () => loadPlaylist($('url').value);
 $('url').addEventListener('keydown', e => e.key === 'Enter' && loadPlaylist($('url').value));
 $('group').onchange = e => { group = e.target.value; renderList(); };
 $('q').oninput = renderList;
+
+/* ---------- obraz w obrazie ---------- */
+const pipBtn = $('pip'), vid = $('v');
+if (document.pictureInPictureEnabled || vid.webkitSupportsPresentationMode) pipBtn.hidden = false;
+pipBtn.onclick = async () => {
+  try {
+    if (document.pictureInPictureElement) await document.exitPictureInPicture();
+    else if (document.pictureInPictureEnabled) await vid.requestPictureInPicture();
+    else vid.webkitSetPresentationMode(vid.webkitPresentationMode === 'picture-in-picture' ? 'inline' : 'picture-in-picture');
+  } catch (e) { alert('Obraz w obrazie niedostępny: ' + e.message); }
+};
 
 $('menu').onclick = () => {
   const a = prompt('Wpisz: 1 = wczytaj plik playlisty / kopię ulubionych, 2 = zapisz kopię ulubionych', '1');
