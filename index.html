@@ -34,11 +34,25 @@
   #pip { flex: none; padding: 7px 12px; }
   #info b { color: var(--text); }
   .empty { padding: 20px; color: var(--dim); text-align: center; }
+  .sec { padding: 6px 12px; font-size: 12px; letter-spacing: .05em; text-transform: uppercase; color: var(--dim); background: #0004; border-bottom: 1px solid var(--line); }
+  .ch { transition: transform .12s; }
+  .grip { flex: none; color: var(--dim); font-size: 18px; line-height: 1; padding: 6px 4px; cursor: grab; touch-action: none; user-select: none; }
+  .ch.drag { position: relative; z-index: 3; transition: none; background: #2a3646; box-shadow: 0 4px 14px #0008; cursor: grabbing; }
+  #stage { position: relative; }
+  #toast { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); max-width: 80%; padding: 8px 14px; border-radius: 20px; background: #000b; color: #fff; pointer-events: none; opacity: 0; transition: opacity .2s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #toast.show { opacity: 1; }
   @media (max-width: 760px) {
     main { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); }
     #stage { order: -1; }
     video { aspect-ratio: 16/9; flex: none; }
     aside { border-right: 0; }
+  }
+  /* telefon poziomo podczas oglądania: obraz na cały ekran */
+  @media (orientation: landscape) and (max-height: 520px) and (pointer: coarse) {
+    body.playing header, body.playing aside, body.playing #bar { display: none; }
+    body.playing main { display: block; }
+    body.playing #stage { position: fixed; inset: 0; z-index: 10; }
+    body.playing video { width: 100%; height: 100%; aspect-ratio: auto; flex: 1; }
   }
 </style>
 </head>
@@ -59,6 +73,7 @@
   </aside>
   <section id="stage">
     <video id="v" controls playsinline autoplay></video>
+    <div id="toast"></div>
     <div id="bar"><div id="info">Wybierz kanał z listy.</div><button id="pip" class="ghost" hidden>Obraz w obrazie</button></div>
   </section>
 </main>
@@ -68,13 +83,13 @@
 <script>
 const $ = id => document.getElementById(id);
 const FAV = '★ Ulubione', ALL = 'Wszystkie';
-let state = { urls: [], favorites: [], last: '' };   // favorites: {key,name,url,logo,group}
+let state = { urls: [], favorites: [], recent: [], last: '' };   // favorites: {key,name,url,logo,group}
 let channels = [], group = ALL, current = null, hls = null;
 
 /* ---------- zapis stanu: tylko localStorage tej przeglądarki (nic nie trafia na serwer) ---------- */
 function loadState() {
   try { state = JSON.parse(localStorage.getItem('iptv') || '') || state; } catch {}
-  state.urls = state.urls || []; state.favorites = state.favorites || [];
+  state.urls = state.urls || []; state.favorites = state.favorites || []; state.recent = state.recent || [];
 }
 function saveState() {
   try { localStorage.setItem('iptv', JSON.stringify(state)); } catch {}
@@ -129,7 +144,7 @@ function openText(text, url) {
     if (!channels.length) { $('list').innerHTML = '<div class="empty">Brak kanałów w tej playlistce.</div>'; return; }
     // odśwież adresy ulubionych (tokeny) na podstawie świeżej playlisty
     const byKey = new Map(channels.map(c => [c.key, c]));
-    state.favorites.forEach(f => { const c = byKey.get(f.key); if (c) Object.assign(f, { url: c.url, logo: c.logo }); });
+    [...state.favorites, ...state.recent].forEach(f => { const c = byKey.get(f.key); if (c) Object.assign(f, { url: c.url, logo: c.logo }); });
     saveState();
   }
   const last = channels.find(c => c.key === state.last);
@@ -161,20 +176,55 @@ function visible() {
   return q ? list.filter(c => c.name.toLowerCase().includes(q)) : list;
 }
 function renderList() {
+  const box = $('list'), q = $('q').value.trim();
   const list = visible();
-  const box = $('list');
-  if (!list.length) { box.innerHTML = '<div class="empty">' + (group === FAV ? 'Brak ulubionych — kliknij ☆ przy kanale.' : 'Brak wyników.') + '</div>'; return; }
+  const recent = group === FAV && !q ? state.recent : [];
+  if (!list.length && !recent.length) { box.innerHTML = '<div class="empty">' + (group === FAV ? 'Brak ulubionych — kliknij ☆ przy kanale.' : 'Brak wyników.') + '</div>'; return; }
   box.innerHTML = '';
   const frag = document.createDocumentFragment();
-  list.forEach(c => {
-    const d = document.createElement('div');
-    d.className = 'ch' + (current && current.key === c.key ? ' on' : '');
-    d.innerHTML = `<img loading="lazy" alt="" src="${esc(c.logo || '')}" onerror="this.style.visibility='hidden'"><span class="n">${esc(c.name)}</span><button class="star${isFav(c) ? ' on' : ''}">${isFav(c) ? '★' : '☆'}</button>`;
-    d.onclick = () => play(c);
-    d.querySelector('.star').onclick = e => { e.stopPropagation(); toggleFav(c); };
-    frag.appendChild(d);
-  });
+  const title = t => { const d = document.createElement('div'); d.className = 'sec'; d.textContent = t; return d; };
+  if (recent.length) { frag.appendChild(title('Ostatnio oglądane')); recent.forEach(c => frag.appendChild(row(c, false))); if (list.length) frag.appendChild(title('Ulubione')); }
+  const sortable = group === FAV && !q;
+  list.forEach((c, i) => frag.appendChild(row(c, sortable, i)));
   box.appendChild(frag);
+}
+function row(c, sortable, idx) {
+  const d = document.createElement('div');
+  d.className = 'ch' + (current && current.key === c.key ? ' on' : '');
+  d.innerHTML = (sortable ? '<span class="grip" title="Przeciągnij, aby zmienić kolejność">⋮⋮</span>' : '') +
+    `<img loading="lazy" alt="" src="${esc(c.logo || '')}" onerror="this.style.visibility='hidden'"><span class="n">${esc(c.name)}</span><button class="star${isFav(c) ? ' on' : ''}">${isFav(c) ? '★' : '☆'}</button>`;
+  d.onclick = () => play(c);
+  d.querySelector('.star').onclick = e => { e.stopPropagation(); toggleFav(c); };
+  if (sortable) { d.dataset.idx = idx; const g = d.querySelector('.grip'); g.onpointerdown = e => startDrag(e, d); g.onclick = e => e.stopPropagation(); }
+  return d;
+}
+
+/* ---------- przeciąganie ulubionych ---------- */
+function startDrag(e, rowEl) {
+  e.preventDefault(); e.stopPropagation();
+  const grip = e.currentTarget, from = +rowEl.dataset.idx;
+  const rows = [...$('list').querySelectorAll('.ch')].filter(r => r.dataset.idx !== undefined);
+  const mids = rows.map(r => r.offsetTop + r.offsetHeight / 2), h = rowEl.offsetHeight;
+  const startY = e.clientY, startScroll = $('list').scrollTop;
+  let to = from;
+  grip.setPointerCapture(e.pointerId);
+  rowEl.classList.add('drag');
+  const move = ev => {
+    const dy = ev.clientY - startY + ($('list').scrollTop - startScroll);
+    rowEl.style.transform = 'translateY(' + dy + 'px)';
+    const pos = mids[from] + dy;
+    to = mids.reduce((best, m, i) => Math.abs(m - pos) < Math.abs(mids[best] - pos) ? i : best, 0);
+    rows.forEach((r, i) => {
+      if (i === from) return;
+      r.style.transform = from < to && i > from && i <= to ? 'translateY(' + -h + 'px)' : to < from && i >= to && i < from ? 'translateY(' + h + 'px)' : '';
+    });
+  };
+  const up = () => {
+    grip.removeEventListener('pointermove', move); grip.removeEventListener('pointerup', up); grip.removeEventListener('pointercancel', up);
+    if (to !== from) { const [m] = state.favorites.splice(from, 1); state.favorites.splice(to, 0, m); saveState(); }
+    renderList();
+  };
+  grip.addEventListener('pointermove', move); grip.addEventListener('pointerup', up); grip.addEventListener('pointercancel', up);
 }
 function toggleFav(c) {
   if (isFav(c)) state.favorites = state.favorites.filter(f => f.key !== c.key);
@@ -186,7 +236,12 @@ const esc = s => String(s).replace(/[&<>"]/g, m => ({ '&': '&amp;', '<': '&lt;',
 /* ---------- odtwarzanie ---------- */
 function play(c, attempt = 0) {
   current = c;
-  if (c.key !== state.last && channels.length > 1) { state.last = c.key; saveState(); }
+  if (channels.length > 1) {
+    state.last = c.key;
+    state.recent = [{ key: c.key, name: c.name, url: c.url, logo: c.logo, group: c.group }, ...state.recent.filter(r => r.key !== c.key)].slice(0, 3);
+    saveState();
+  }
+  document.body.classList.add('playing');
   const v = $('v');
   const say = t => $('info').innerHTML = '<b>' + esc(c.name) + '</b>' + (t ? ' — ' + t : '');
   say('ładowanie…');
@@ -217,6 +272,41 @@ $('url').addEventListener('keydown', e => e.key === 'Enter' && loadPlaylist($('u
 $('group').onchange = e => { group = e.target.value; renderList(); };
 $('q').oninput = renderList;
 
+/* ---------- poprzedni / następny kanał ---------- */
+function step(dir) {
+  const list = visible();
+  if (!list.length) return;
+  const i = current ? list.findIndex(c => c.key === current.key) : -1;
+  const next = i < 0 ? list[0] : list[(i + dir + list.length) % list.length];
+  play(next);
+  const t = $('toast'); t.textContent = (dir > 0 ? '▶ ' : '◀ ') + next.name; t.classList.add('show');
+  clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show'), 1400);
+  const on = $('list').querySelector('.ch.on'); if (on) on.scrollIntoView({ block: 'nearest' });
+}
+let sx = null, sy = 0, st = 0;
+$('v').addEventListener('touchstart', e => {
+  const t = e.touches[0], r = e.currentTarget.getBoundingClientRect();
+  if (e.touches.length !== 1 || t.clientY > r.bottom - 60) { sx = null; return; }     // dolny pasek to kontrolki odtwarzacza
+  sx = t.clientX; sy = t.clientY; st = Date.now();
+}, { passive: true });
+$('v').addEventListener('touchend', e => {
+  if (sx === null) return;
+  const t = e.changedTouches[0], dx = t.clientX - sx, dy = t.clientY - sy; sx = null;
+  if (Math.abs(dx) > 70 && Math.abs(dx) > 2 * Math.abs(dy) && Date.now() - st < 800) step(dx < 0 ? 1 : -1);
+}, { passive: true });
+document.addEventListener('keydown', e => {
+  if (/INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName)) return;
+  if (e.key === 'PageDown') step(1);
+  if (e.key === 'PageUp') step(-1);
+});
+
+/* ---------- pełny ekran po obróceniu telefonu ---------- */
+matchMedia('(orientation: landscape)').addEventListener('change', e => {
+  if (!document.body.classList.contains('playing') || !matchMedia('(pointer: coarse)').matches) return;
+  if (e.matches) { const st = $('stage'); st.requestFullscreen && st.requestFullscreen({ navigationUI: 'hide' }).catch(() => {}); }
+  else if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+});
+
 /* ---------- obraz w obrazie ---------- */
 const pipBtn = $('pip'), vid = $('v');
 if (document.pictureInPictureEnabled || vid.webkitSupportsPresentationMode) pipBtn.hidden = false;
@@ -239,7 +329,7 @@ $('menu').onclick = () => {
 $('file').onchange = async e => {
   const f = e.target.files[0]; if (!f) return;
   const t = await f.text();
-  try { const j = JSON.parse(t); if (j.favorites) { state = { urls: j.urls || [], favorites: j.favorites, last: j.last || '' }; saveState(); renderRecent(); renderGroups(); renderList(); return; } } catch {}
+  try { const j = JSON.parse(t); if (j.favorites) { state = { urls: j.urls || [], favorites: j.favorites, recent: j.recent || [], last: j.last || '' }; saveState(); renderRecent(); renderGroups(); renderList(); return; } } catch {}
   openText(t, '');
   e.target.value = '';
 };
