@@ -67,6 +67,15 @@
   body.native #stage, body.native video { background: transparent; }
   #pp { display: none; }
   body.native #pp { display: block; }
+  #dvr { position: absolute; left: 8px; right: 8px; bottom: 8px; z-index: 6; display: none; padding: 10px; border-radius: 14px; background: #000c; color: #fff; }
+  body.native #dvr.show { display: block; }
+  #dvr .r { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  #dvr button { flex: 1 1 0; min-width: 56px; padding: 9px 4px; background: #ffffff1a; color: #fff; border: 1px solid #ffffff22; font-weight: 600; }
+  #dvr button.live { background: #d93025; border-color: #d93025; }
+  #dvr button.live.on { background: #1e8e3e; border-color: #1e8e3e; }
+  #dvr input[type=range] { width: 100%; margin: 10px 0 2px; accent-color: #3da9fc; }
+  #dvr .lab { font-size: 13px; color: #ddd; text-align: center; }
+  #dvr.nodvr .rw, #dvr.nodvr input, #dvr.nodvr .live { display: none; }
   #toast { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); max-width: 80%; padding: 8px 14px; border-radius: 20px; background: #000b; color: #fff; pointer-events: none; opacity: 0; transition: opacity .2s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   #toast.show { opacity: 1; }
   @media (max-width: 760px) {
@@ -105,6 +114,18 @@
     <video id="v" controls controlsList="nofullscreen" playsinline autoplay poster="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"></video>
     <button id="fsx" class="ghost" title="Wyjdź z pełnego ekranu">✕</button>
     <div id="toast"></div>
+    <div id="dvr">
+      <div class="r rw">
+        <button data-d="-60">⏪ 60 s</button><button data-d="-30">⏪ 30 s</button><button data-d="-10">⏪ 10 s</button>
+        <button data-d="10">10 s ⏩</button><button data-d="30">30 s ⏩</button>
+      </div>
+      <input id="dvrs" type="range" min="0" max="1" step="1" value="1">
+      <div class="r">
+        <button id="dvrpp">⏯</button>
+        <span class="lab" id="dvrl" style="flex:3">NA ŻYWO</span>
+        <button class="live on" id="dvrlive">● NA ŻYWO</button>
+      </div>
+    </div>
     <div id="bar"><div id="info">Wybierz kanał z listy.</div><button id="pip" class="ghost" hidden>Obraz w obrazie</button>
     <button id="pp" class="ghost" title="Odtwarzaj / pauza">⏯</button>
     <button id="fs" class="ghost" title="Pełny ekran">⛶</button></div>
@@ -436,7 +457,32 @@ if (NATIVE) {
   addEventListener('resize', syncRect);
   setInterval(syncRect, 400);
   $('pp').onclick = () => NP.toggle().catch(() => {});
-  $('v').addEventListener('click', () => NP.toggle().catch(() => {}));
+
+  // nakładka z cofaniem: dotknięcie obrazu pokazuje/ukrywa ją
+  const dvr = $('dvr'), slider = $('dvrs'), lab = $('dvrl'), liveBtn = $('dvrlive');
+  let hideT = 0, dragging = false, buffered = 0;
+  const showDvr = () => { dvr.classList.add('show'); clearTimeout(hideT); hideT = setTimeout(() => { if (!dragging) dvr.classList.remove('show'); }, 6000); };
+  const fmt = sec => { sec = Math.round(sec); return Math.floor(sec / 60) + ':' + String(sec % 60).padStart(2, '0'); };
+  $('v').addEventListener('click', () => dvr.classList.contains('show') ? dvr.classList.remove('show') : showDvr());
+  dvr.querySelectorAll('button[data-d]').forEach(b => b.onclick = () => { NP.seekBy({ delta: +b.dataset.d }).catch(() => {}); showDvr(); });
+  liveBtn.onclick = () => { NP.goLive().catch(() => {}); showDvr(); };
+  $('dvrpp').onclick = () => { NP.toggle().catch(() => {}); showDvr(); };
+  slider.addEventListener('input', () => { dragging = true; showDvr(); lab.textContent = '−' + fmt(buffered - slider.value) + ' za transmisją'; });
+  slider.addEventListener('change', () => { dragging = false; NP.seekTo({ behind: buffered - slider.value }).catch(() => {}); showDvr(); });
+  setInterval(async () => {
+    if (!current) return;
+    try {
+      const st = await NP.dvrState();
+      dvr.classList.toggle('nodvr', !st.available);
+      if (dragging) return;
+      buffered = Math.max(1, Math.floor(st.buffered));
+      slider.max = buffered;
+      slider.value = Math.max(0, buffered - Math.round(st.behind));
+      liveBtn.classList.toggle('on', st.live || st.behind < 10);
+      lab.textContent = !st.available ? 'cofanie niedostępne dla tego kanału'
+        : st.behind < 10 ? 'NA ŻYWO (bufor ' + fmt(st.buffered) + ')' : '−' + fmt(st.behind) + ' za transmisją';
+    } catch {}
+  }, 1000);
 }
 
 /* ---------- obraz w obrazie ---------- */
