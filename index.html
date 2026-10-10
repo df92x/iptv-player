@@ -63,6 +63,11 @@
   body.fs video { width: 100%; height: 100%; aspect-ratio: auto; flex: 1; }
   #fsx { position: absolute; top: 10px; right: 10px; z-index: 11; display: none; background: #000a; color: #fff; border-color: #fff4; }
   body.fs #fsx { display: block; }
+  html.native, html.native body { background: transparent; }
+  body.native main { background: var(--bg); }
+  body.native #stage, body.native video { background: transparent; }
+  #pp { display: none; }
+  body.native #pp { display: block; }
   #toast { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); max-width: 80%; padding: 8px 14px; border-radius: 20px; background: #000b; color: #fff; pointer-events: none; opacity: 0; transition: opacity .2s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   #toast.show { opacity: 1; }
   @media (max-width: 760px) {
@@ -102,6 +107,7 @@
     <button id="fsx" class="ghost" title="Wyjdź z pełnego ekranu">✕</button>
     <div id="toast"></div>
     <div id="bar"><div id="info">Wybierz kanał z listy.</div><button id="pip" class="ghost" hidden>Obraz w obrazie</button>
+    <button id="pp" class="ghost" title="Odtwarzaj / pauza">⏯</button>
     <button id="fs" class="ghost" title="Pełny ekran">⛶</button></div>
   </section>
 </main>
@@ -110,6 +116,8 @@
 <script src="hls.min.js"></script>
 <script>
 const $ = id => document.getElementById(id);
+const NATIVE = !!(window.AndroidApp && window.AndroidApp.play);   // aplikacja Android z odtwarzaczem VLC
+if (NATIVE) { document.documentElement.classList.add('native'); document.body.classList.add('native'); }
 const FAV = '★ Ulubione', ALL = 'Wszystkie';
 let state = { urls: [], favorites: [], recent: [], last: '' };   // favorites: {key,name,url,logo,group}
 let channels = [], group = ALL, current = null, hls = null;
@@ -123,7 +131,7 @@ function saveState() {
   try { localStorage.setItem('iptv', JSON.stringify(state)); } catch {}
 }
 // strona po HTTPS nie może odtwarzać http:// — próbujemy wersji https
-const secure = u => location.protocol === 'https:' ? u.replace(/^http:\/\//i, 'https://') : u;
+const secure = u => !NATIVE && location.protocol === 'https:' ? u.replace(/^http:\/\//i, 'https://') : u;
 
 /* ---------- parser M3U ---------- */
 function parseM3U(text) {
@@ -156,11 +164,16 @@ async function loadPlaylist(url, pub = false) {
   state.pub = pub;
   let text;
   try {
+    if (NATIVE && /^https?:\/\//i.test(url)) {
+      text = await new Promise(res => setTimeout(() => res(AndroidApp.fetchText(url)), 0));
+      if (!text) throw new Error('brak odpowiedzi serwera');
+    } else {
     let r;
     try { r = await fetch(url); }                                   // bezpośrednio (dostawca ma CORS)
     catch { r = await fetch('/proxy?url=' + encodeURIComponent(url)); }   // zapas: lokalny serwer
     if (!r.ok) throw new Error('HTTP ' + r.status);
     text = await r.text();
+    }
   } catch (e) { $('list').innerHTML = '<div class="empty">Nie udało się pobrać playlisty: ' + e.message + '</div>'; return; }
   if (!pub) rememberUrl(url); else saveState();
   openText(text, url);
@@ -309,6 +322,7 @@ function play(c, attempt = 0) {
   say('ładowanie…');
   if (hls) { hls.destroy(); hls = null; }
   v.removeAttribute('src');
+  if (NATIVE) { AndroidApp.play(c.url); syncRect(); renderList(); return; }
   const safari = /^((?!chrome|android|crios|fxios|edg).)*safari/i.test(navigator.userAgent);
   if (!safari && window.Hls && Hls.isSupported()) {
     const h = hls = new Hls({ lowLatencyMode: false });
@@ -376,7 +390,8 @@ function setFs(on) {
   document.body.classList.toggle('fs', on);
   try { window.AndroidApp && AndroidApp.immersive(on); } catch {}
   const st = $('stage');
-  if (on) { st.requestFullscreen && st.requestFullscreen().catch(() => {}); }
+  if (NATIVE) { setTimeout(syncRect, 50); }
+  else if (on) { st.requestFullscreen && st.requestFullscreen().catch(() => {}); }
   else if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
 }
 $('fs').onclick = () => setFs(!document.body.classList.contains('fs'));
@@ -392,9 +407,34 @@ try {
   });
 } catch {}
 
+/* ---------- natywny odtwarzacz (aplikacja Android) ---------- */
+let lastRect = '';
+function syncRect() {
+  if (!NATIVE) return;
+  const r = $('v').getBoundingClientRect(), d = window.devicePixelRatio || 1;
+  const key = [r.left, r.top, r.width, r.height, d].map(n => Math.round(n * d)).join(',');
+  if (key === lastRect) return;
+  lastRect = key;
+  AndroidApp.setRect(Math.round(r.left * d), Math.round(r.top * d), Math.round(r.width * d), Math.round(r.height * d));
+}
+if (NATIVE) {
+  $('v').removeAttribute('controls');
+  window.onNativePlayer = st => {
+    if (!current) return;
+    const t = { playing: '', buffering: 'buforowanie…', paused: 'pauza', error: 'nie udało się odtworzyć', ended: 'koniec transmisji' }[st];
+    $('info').innerHTML = '<b>' + esc(current.name) + '</b>' + (t ? ' — ' + t : '');
+  };
+  new ResizeObserver(syncRect).observe($('v'));
+  new ResizeObserver(syncRect).observe(document.body);
+  addEventListener('resize', syncRect);
+  setInterval(syncRect, 400);
+  $('pp').onclick = () => AndroidApp.toggle();
+  $('v').addEventListener('click', () => AndroidApp.toggle());
+}
+
 /* ---------- obraz w obrazie ---------- */
 const pipBtn = $('pip'), vid = $('v');
-if (document.pictureInPictureEnabled || vid.webkitSupportsPresentationMode) pipBtn.hidden = false;
+if (!NATIVE && (document.pictureInPictureEnabled || vid.webkitSupportsPresentationMode)) pipBtn.hidden = false;
 pipBtn.onclick = async () => {
   try {
     if (document.pictureInPictureElement) await document.exitPictureInPicture();
