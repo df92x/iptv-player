@@ -61,6 +61,7 @@
   <input id="url" type="url" list="recent" placeholder="Wklej link do playlisty .m3u / .m3u8" autocomplete="off">
   <datalist id="recent"></datalist>
   <button id="load">Wczytaj</button>
+  <button id="pub" class="ghost" title="Darmowe, publicznie dostępne kanały z całego świata">Lista publiczna</button>
   <button id="menu" class="ghost" title="Plik / kopia ulubionych">⋯</button>
 </header>
 <main>
@@ -120,10 +121,12 @@ function parseM3U(text) {
 }
 
 /* ---------- wczytywanie playlisty ---------- */
-async function loadPlaylist(url) {
+async function loadPlaylist(url, pub = false) {
   url = url.trim(); if (!url) return;
   $('list').innerHTML = '<div class="empty">Wczytuję…</div>';
-  url = secure(url); $('url').value = url;
+  url = secure(url);
+  if (!pub) $('url').value = url;
+  state.pub = pub;
   let text;
   try {
     let r;
@@ -132,7 +135,7 @@ async function loadPlaylist(url) {
     if (!r.ok) throw new Error('HTTP ' + r.status);
     text = await r.text();
   } catch (e) { $('list').innerHTML = '<div class="empty">Nie udało się pobrać playlisty: ' + e.message + '</div>'; return; }
-  rememberUrl(url);
+  if (!pub) rememberUrl(url); else saveState();
   openText(text, url);
 }
 function openText(text, url) {
@@ -185,7 +188,9 @@ function renderList() {
   const title = t => { const d = document.createElement('div'); d.className = 'sec'; d.textContent = t; return d; };
   if (recent.length) { frag.appendChild(title('Ostatnio oglądane')); recent.forEach(c => frag.appendChild(row(c, false))); if (list.length) frag.appendChild(title('Ulubione')); }
   const sortable = group === FAV && !q;
-  list.forEach((c, i) => frag.appendChild(row(c, sortable, i)));
+  const LIMIT = 700;
+  list.slice(0, LIMIT).forEach((c, i) => frag.appendChild(row(c, sortable, i)));
+  if (list.length > LIMIT) { const d = document.createElement('div'); d.className = 'empty'; d.textContent = 'Pokazano ' + LIMIT + ' z ' + list.length + ' — zawęź grupą lub wyszukiwarką.'; frag.appendChild(d); }
   box.appendChild(frag);
 }
 function row(c, sortable, idx) {
@@ -268,6 +273,7 @@ function play(c, attempt = 0) {
 
 /* ---------- zdarzenia ---------- */
 $('load').onclick = () => loadPlaylist($('url').value);
+$('pub').onclick = () => loadPlaylist('public-channels.m3u', true);
 $('url').addEventListener('keydown', e => e.key === 'Enter' && loadPlaylist($('url').value));
 $('group').onchange = e => { group = e.target.value; renderList(); };
 $('q').oninput = renderList;
@@ -336,7 +342,8 @@ $('file').onchange = async e => {
 
 (async function init() {
   loadState(); renderRecent();
-  if (state.urls[0]) { $('url').value = state.urls[0]; loadPlaylist(state.urls[0]); }
+  if (state.pub) { if (state.urls[0]) $('url').value = state.urls[0]; loadPlaylist('public-channels.m3u', true); }
+  else if (state.urls[0]) { $('url').value = state.urls[0]; loadPlaylist(state.urls[0]); }
   else if (state.favorites.length) { group = FAV; renderList(); }
 })();
 </script>
