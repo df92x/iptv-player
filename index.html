@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>IPTV Player</title>
+<style>
+  :root { --bg:#111418; --panel:#1b2027; --line:#2a313b; --text:#e8ecf1; --dim:#8d97a5; --acc:#3da9fc; --star:#ffc933; }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body { background: var(--bg); color: var(--text); font: 15px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif; display: flex; flex-direction: column; }
+  header { display: flex; gap: 8px; padding: 10px; background: var(--panel); border-bottom: 1px solid var(--line); }
+  header input { flex: 1; min-width: 0; }
+  input, select, button { font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; }
+  button { cursor: pointer; background: var(--acc); border-color: var(--acc); color: #04121f; font-weight: 600; }
+  button.ghost { background: var(--bg); color: var(--text); border-color: var(--line); font-weight: 400; }
+  main { flex: 1; display: grid; grid-template-columns: minmax(300px, 380px) 1fr; min-height: 0; }
+  aside { display: flex; flex-direction: column; border-right: 1px solid var(--line); min-height: 0; background: var(--panel); }
+  .filters { display: flex; gap: 8px; padding: 10px; }
+  .filters select, .filters input { flex: 1; min-width: 0; }
+  #list { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+  .ch { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-bottom: 1px solid var(--line); cursor: pointer; }
+  .ch:hover { background: #222933; }
+  .ch.on { background: #16324a; }
+  .ch img { width: 40px; height: 28px; object-fit: contain; flex: none; background: #0003; border-radius: 4px; }
+  .ch span.n { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .star { background: none; border: 0; color: var(--dim); font-size: 22px; padding: 0 4px; line-height: 1; font-weight: 400; }
+  .star.on { color: var(--star); }
+  #stage { display: flex; flex-direction: column; min-width: 0; background: #000; }
+  video { width: 100%; flex: 1; min-height: 0; background: #000; }
+  #info { padding: 8px 12px; background: var(--panel); color: var(--dim); min-height: 38px; }
+  #info b { color: var(--text); }
+  .empty { padding: 20px; color: var(--dim); text-align: center; }
+  @media (max-width: 760px) {
+    main { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
+    #stage { order: -1; }
+    video { aspect-ratio: 16/9; flex: none; }
+    aside { border-right: 0; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <input id="url" type="url" list="recent" placeholder="Wklej link do playlisty .m3u / .m3u8" autocomplete="off">
+  <datalist id="recent"></datalist>
+  <button id="load">Wczytaj</button>
+  <button id="menu" class="ghost" title="Plik / kopia ulubionych">⋯</button>
+</header>
+<main>
+  <aside>
+    <div class="filters">
+      <select id="group"></select>
+      <input id="q" type="search" placeholder="Szukaj…">
+    </div>
+    <div id="list"><div class="empty">Wklej link do playlisty i kliknij „Wczytaj”.</div></div>
+  </aside>
+  <section id="stage">
+    <video id="v" controls playsinline autoplay></video>
+    <div id="info">Wybierz kanał z listy.</div>
+  </section>
+</main>
+<input id="file" type="file" accept=".m3u,.m3u8,.txt,.json" hidden>
+
+<script src="hls.min.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+const FAV = '★ Ulubione', ALL = 'Wszystkie';
+let state = { urls: [], favorites: [] };   // favorites: {key,name,url,logo,group}
+let channels = [], group = ALL, current = null, hls = null;
+
+/* ---------- zapis stanu: tylko localStorage tej przeglądarki (nic nie trafia na serwer) ---------- */
+function loadState() {
+  try { state = JSON.parse(localStorage.getItem('iptv') || '') || state; } catch {}
+  state.urls = state.urls || []; state.favorites = state.favorites || [];
+}
+function saveState() {
+  try { localStorage.setItem('iptv', JSON.stringify(state)); } catch {}
+}
+// strona po HTTPS nie może odtwarzać http:// — próbujemy wersji https
+const secure = u => location.protocol === 'https:' ? u.replace(/^http:\/\//i, 'https://') : u;
+
+/* ---------- parser M3U ---------- */
+function parseM3U(text) {
+  const out = []; let meta = null, grp = '';
+  for (let line of text.split(/\r?\n/)) {
+    line = line.trim();
+    if (!line) continue;
+    if (line.startsWith('#EXTINF')) {
+      const attr = k => (line.match(new RegExp(k + '="([^"]*)"', 'i')) || [])[1] || '';
+      const name = line.includes(',') ? line.slice(line.lastIndexOf(',') + 1).trim() : '';
+      meta = { name: name || attr('tvg-name'), logo: attr('tvg-logo'), id: attr('tvg-id'), group: attr('group-title') || grp };
+    } else if (line.startsWith('#EXTGRP:')) {
+      grp = line.slice(8).trim(); if (meta) meta.group = meta.group || grp;
+    } else if (line.startsWith('#EXTVLCOPT') || line[0] === '#') {
+      continue;
+    } else if (meta) {
+      meta.url = line; meta.key = meta.id || meta.name; meta.group = meta.group || 'Inne';
+      out.push(meta); meta = null;
+    }
+  }
+  return out;
+}
+
+/* ---------- wczytywanie playlisty ---------- */
+async function loadPlaylist(url) {
+  url = url.trim(); if (!url) return;
+  $('list').innerHTML = '<div class="empty">Wczytuję…</div>';
+  url = secure(url); $('url').value = url;
+  let text;
+  try {
+    let r;
+    try { r = await fetch(url); }                                   // bezpośrednio (dostawca ma CORS)
+    catch { r = await fetch('/proxy?url=' + encodeURIComponent(url)); }   // zapas: lokalny serwer
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    text = await r.text();
+  } catch (e) { $('list').innerHTML = '<div class="empty">Nie udało się pobrać playlisty: ' + e.message + '</div>'; return; }
+  rememberUrl(url);
+  openText(text, url);
+}
+function openText(text, url) {
+  if (/#EXT-X-(TARGETDURATION|STREAM-INF)/.test(text)) {          // to pojedynczy strumień, nie lista kanałów
+    channels = [{ name: 'Strumień', url, group: 'Inne', key: url, logo: '' }];
+  } else {
+    channels = parseM3U(text);
+    channels.forEach(c => { c.url = secure(c.url); c.logo = secure(c.logo); });
+    if (!channels.length) { $('list').innerHTML = '<div class="empty">Brak kanałów w tej playlistce.</div>'; return; }
+    // odśwież adresy ulubionych (tokeny) na podstawie świeżej playlisty
+    const byKey = new Map(channels.map(c => [c.key, c]));
+    state.favorites.forEach(f => { const c = byKey.get(f.key); if (c) Object.assign(f, { url: c.url, logo: c.logo }); });
+    saveState();
+  }
+  group = state.favorites.length ? FAV : ALL;
+  renderGroups(); renderList();
+  if (channels.length === 1) play(channels[0]);
+}
+function rememberUrl(url) {
+  state.urls = [url, ...state.urls.filter(u => u !== url)].slice(0, 10);
+  saveState(); renderRecent();
+}
+function renderRecent() { $('recent').innerHTML = state.urls.map(u => `<option value="${u.replace(/"/g, '&quot;')}">`).join(''); }
+
+/* ---------- UI ---------- */
+const isFav = c => state.favorites.some(f => f.key === c.key);
+function renderGroups() {
+  const names = [...new Set(channels.map(c => c.group))].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+  const opts = [FAV, ALL, ...names];
+  if (!opts.includes(group)) group = ALL;
+  $('group').innerHTML = opts.map(g => {
+    const n = g === FAV ? state.favorites.length : g === ALL ? channels.length : channels.filter(c => c.group === g).length;
+    return `<option value="${esc(g)}"${g === group ? ' selected' : ''}>${esc(g)} (${n})</option>`;
+  }).join('');
+}
+function visible() {
+  const q = $('q').value.trim().toLowerCase();
+  let list = group === FAV ? state.favorites : group === ALL ? channels : channels.filter(c => c.group === group);
+  return q ? list.filter(c => c.name.toLowerCase().includes(q)) : list;
+}
+function renderList() {
+  const list = visible();
+  const box = $('list');
+  if (!list.length) { box.innerHTML = '<div class="empty">' + (group === FAV ? 'Brak ulubionych — kliknij ☆ przy kanale.' : 'Brak wyników.') + '</div>'; return; }
+  box.innerHTML = '';
+  const frag = document.createDocumentFragment();
+  list.forEach(c => {
+    const d = document.createElement('div');
+    d.className = 'ch' + (current && current.key === c.key ? ' on' : '');
+    d.innerHTML = `<img loading="lazy" alt="" src="${esc(c.logo || '')}" onerror="this.style.visibility='hidden'"><span class="n">${esc(c.name)}</span><button class="star${isFav(c) ? ' on' : ''}">${isFav(c) ? '★' : '☆'}</button>`;
+    d.onclick = () => play(c);
+    d.querySelector('.star').onclick = e => { e.stopPropagation(); toggleFav(c); };
+    frag.appendChild(d);
+  });
+  box.appendChild(frag);
+}
+function toggleFav(c) {
+  if (isFav(c)) state.favorites = state.favorites.filter(f => f.key !== c.key);
+  else state.favorites.push({ key: c.key, name: c.name, url: c.url, logo: c.logo, group: c.group });
+  saveState(); renderGroups(); renderList();
+}
+const esc = s => String(s).replace(/[&<>"]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[m]));
+
+/* ---------- odtwarzanie ---------- */
+function play(c, attempt = 0) {
+  current = c;
+  const v = $('v');
+  const say = t => $('info').innerHTML = '<b>' + esc(c.name) + '</b>' + (t ? ' — ' + t : '');
+  say('ładowanie…');
+  if (hls) { hls.destroy(); hls = null; }
+  v.removeAttribute('src');
+  const safari = /^((?!chrome|android|crios|fxios|edg).)*safari/i.test(navigator.userAgent);
+  if (!safari && window.Hls && Hls.isSupported()) {
+    const h = hls = new Hls({ lowLatencyMode: false });
+    h.loadSource(c.url); h.attachMedia(v);
+    h.on(Hls.Events.MANIFEST_PARSED, () => { v.play().catch(() => {}); });
+    h.on(Hls.Events.FRAG_BUFFERED, () => say(''));
+    h.on(Hls.Events.ERROR, (_, d) => {
+      if (!d.fatal || h !== hls) return;
+      // błędy dekodera/sieci: do 3 pełnych prób od początku, potem komunikat
+      if (attempt < 3) { say('ponawiam (' + (attempt + 1) + '/3)…'); setTimeout(() => current === c && play(c, attempt + 1), 800); }
+      else say('nie udało się odtworzyć (' + esc(d.details) + ')');
+    });
+  } else {                                                          // iPhone/iPad Safari: natywne HLS
+    v.src = c.url; v.play().catch(() => {});
+    $('info').innerHTML = '<b>' + esc(c.name) + '</b>';
+  }
+  renderList();
+}
+
+/* ---------- zdarzenia ---------- */
+$('load').onclick = () => loadPlaylist($('url').value);
+$('url').addEventListener('keydown', e => e.key === 'Enter' && loadPlaylist($('url').value));
+$('group').onchange = e => { group = e.target.value; renderList(); };
+$('q').oninput = renderList;
+
+$('menu').onclick = () => {
+  const a = prompt('Wpisz: 1 = wczytaj plik playlisty / kopię ulubionych, 2 = zapisz kopię ulubionych', '1');
+  if (a === '1') $('file').click();
+  if (a === '2') {
+    const b = new Blob([JSON.stringify(state, null, 1)], { type: 'application/json' });
+    const l = document.createElement('a'); l.href = URL.createObjectURL(b); l.download = 'iptv-backup.json'; l.click();
+  }
+};
+$('file').onchange = async e => {
+  const f = e.target.files[0]; if (!f) return;
+  const t = await f.text();
+  try { const j = JSON.parse(t); if (j.favorites) { state = { urls: j.urls || [], favorites: j.favorites }; saveState(); renderRecent(); renderGroups(); renderList(); return; } } catch {}
+  openText(t, '');
+  e.target.value = '';
+};
+
+(async function init() {
+  loadState(); renderRecent();
+  if (state.urls[0]) { $('url').value = state.urls[0]; loadPlaylist(state.urls[0]); }
+  else if (state.favorites.length) { group = FAV; renderList(); }
+})();
+</script>
+</body>
+</html>
