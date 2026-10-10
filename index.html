@@ -39,6 +39,15 @@
   .grip { flex: none; color: var(--dim); font-size: 18px; line-height: 1; padding: 6px 4px; cursor: grab; touch-action: none; user-select: none; }
   .ch.drag { position: relative; z-index: 3; transition: none; background: #2a3646; box-shadow: 0 4px 14px #0008; cursor: grabbing; }
   #stage { position: relative; }
+  #lists { position: fixed; z-index: 30; top: 58px; left: 10px; right: 10px; max-width: 520px; max-height: 60vh; overflow-y: auto; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 8px 24px #0009; }
+  #lists[hidden] { display: none; }
+  #lists .li { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--line); cursor: pointer; }
+  #lists .li:last-child { border-bottom: 0; }
+  #lists .li:hover { background: #222933; }
+  #lists .li .t { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #lists .li .t small { display: block; color: var(--dim); }
+  #lists .x { flex: none; background: none; border: 0; color: var(--dim); font-size: 18px; padding: 4px 8px; font-weight: 400; }
+  #lists .x:hover { color: #ff6b6b; }
   #toast { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); max-width: 80%; padding: 8px 14px; border-radius: 20px; background: #000b; color: #fff; pointer-events: none; opacity: 0; transition: opacity .2s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   #toast.show { opacity: 1; }
   @media (max-width: 760px) {
@@ -58,12 +67,13 @@
 </head>
 <body>
 <header>
-  <input id="url" type="url" list="recent" placeholder="Wklej link do playlisty .m3u / .m3u8" autocomplete="off">
-  <datalist id="recent"></datalist>
+  <input id="url" type="url" placeholder="Wklej link do playlisty .m3u / .m3u8" autocomplete="off">
   <button id="load">Wczytaj</button>
+  <button id="saved" class="ghost" title="Zapisane listy">Moje listy</button>
   <button id="pub" class="ghost" title="Darmowe, publicznie dostępne kanały z całego świata">Lista publiczna</button>
   <button id="menu" class="ghost" title="Plik / kopia ulubionych">⋯</button>
 </header>
+<div id="lists" hidden></div>
 <main>
   <aside>
     <div class="filters">
@@ -158,10 +168,29 @@ function openText(text, url) {
   else if (last) { play(last); const on = $('list').querySelector('.ch.on'); if (on) on.scrollIntoView({ block: 'center' }); }
 }
 function rememberUrl(url) {
-  state.urls = [url, ...state.urls.filter(u => u !== url)].slice(0, 10);
+  state.urls = [url, ...state.urls.filter(u => u !== url)].slice(0, 50);
   saveState(); renderRecent();
 }
-function renderRecent() { $('recent').innerHTML = state.urls.map(u => `<option value="${u.replace(/"/g, '&quot;')}">`).join(''); }
+function listLabel(u) {            // bez tokenu w query — tylko host i ścieżka
+  try { const x = new URL(u, location.href); return { host: x.hostname, path: (x.pathname + '').replace(/\/$/, '').slice(-40) }; }
+  catch { return { host: u.slice(0, 40), path: '' }; }
+}
+function renderRecent() {
+  const box = $('lists');
+  if (!state.urls.length) { box.innerHTML = '<div class="empty">Brak zapisanych list — wpisz link i kliknij „Wczytaj”.</div>'; return; }
+  box.innerHTML = '';
+  state.urls.forEach(u => {
+    const l = listLabel(u), d = document.createElement('div');
+    d.className = 'li';
+    d.innerHTML = '<span class="t">' + esc(l.host) + '<small>' + esc(l.path) + '</small></span><button class="x" title="Usuń z listy">✕</button>';
+    d.onclick = () => { $('lists').hidden = true; $('url').value = u; loadPlaylist(u); };
+    d.querySelector('.x').onclick = e => {
+      e.stopPropagation();
+      state.urls = state.urls.filter(x => x !== u); saveState(); renderRecent();
+    };
+    box.appendChild(d);
+  });
+}
 
 /* ---------- UI ---------- */
 const isFav = c => state.favorites.some(f => f.key === c.key);
@@ -282,6 +311,8 @@ function play(c, attempt = 0) {
 
 /* ---------- zdarzenia ---------- */
 $('load').onclick = () => loadPlaylist($('url').value);
+$('saved').onclick = e => { e.stopPropagation(); renderRecent(); $('lists').hidden = !$('lists').hidden; };
+document.addEventListener('click', e => { if (!$('lists').hidden && !$('lists').contains(e.target)) $('lists').hidden = true; });
 $('pub').onclick = () => loadPlaylist('public-channels.m3u', true);
 $('url').addEventListener('keydown', e => e.key === 'Enter' && loadPlaylist($('url').value));
 $('group').onchange = e => { group = e.target.value; renderList(); };
