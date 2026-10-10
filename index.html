@@ -66,6 +66,7 @@
   html.native, html.native body { background: transparent; }
   body.native #stage, body.native video { background: transparent; }
   #pp { display: none; }
+  body.native .web-only { display: none; }
   body.native #pp { display: block; }
   #dvr { position: absolute; left: 8px; right: 8px; bottom: 8px; z-index: 6; display: none; padding: 10px; border-radius: 14px; background: #000c; color: #fff; }
   body.native #dvr.show { display: block; }
@@ -133,6 +134,8 @@
       </div>
     </div>
     <div id="bar"><div id="info">Wybierz kanał z listy.</div><button id="pip" class="ghost" hidden>Obraz w obrazie</button>
+    <button id="wb" class="ghost web-only" title="Cofnij o 30 s (w granicach bufora przeglądarki)">⏪ 30 s</button>
+    <button id="wl" class="ghost web-only" title="Wróć na żywo">● Na żywo</button>
     <button id="pp" class="ghost" title="Odtwarzaj / pauza">⏯</button>
     <button id="fs" class="ghost" title="Pełny ekran">⛶</button></div>
   </section>
@@ -353,7 +356,7 @@ function play(c, attempt = 0) {
   if (NATIVE) { audioInfo = ''; NP.play({ url: c.url, dvr: dvrSeconds() }).catch(() => {}); syncRect(); renderList(); return; }
   const safari = /^((?!chrome|android|crios|fxios|edg).)*safari/i.test(navigator.userAgent);
   if (!safari && window.Hls && Hls.isSupported()) {
-    const h = hls = new Hls({ lowLatencyMode: false });
+    const h = hls = new Hls({ lowLatencyMode: false, backBufferLength: Infinity, liveBackBufferLength: Infinity, maxMaxBufferLength: 60 });
     h.loadSource(c.url); h.attachMedia(v);
     h.on(Hls.Events.MANIFEST_PARSED, () => { v.play().catch(() => {}); });
     h.on(Hls.Events.FRAG_BUFFERED, () => say(''));
@@ -434,6 +437,22 @@ try {
     else App.exitApp();
   });
 } catch {}
+
+/* ---------- cofanie w przeglądarce ----------
+   hls.js zawęża seekable do okna playlisty dostawcy (~36 s). Wyłączamy to, więc cofać można w całym
+   materiale, który przeglądarka trzyma w buforze (zwykle kilka minut). */
+if (!NATIVE && window.MediaSource && MediaSource.prototype.setLiveSeekableRange) {
+  MediaSource.prototype.setLiveSeekableRange = function () {};
+}
+$('wb').onclick = () => {
+  const v = $('v'); if (!v.buffered.length) return;
+  v.currentTime = Math.max(v.buffered.start(0), v.currentTime - 30);
+};
+$('wl').onclick = () => {
+  const v = $('v'); if (!v.buffered.length) return;
+  v.currentTime = v.buffered.end(v.buffered.length - 1) - 1;
+  v.play().catch(() => {});
+};
 
 /* ---------- natywny odtwarzacz (aplikacja Android) ---------- */
 let lastRect = '', audioInfo = '';
