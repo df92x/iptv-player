@@ -151,7 +151,8 @@ function openText(text, url) {
     saveState();
   }
   const last = channels.find(c => c.key === state.last);
-  group = last ? last.group : state.favorites.length ? FAV : ALL;
+  const pl = channels.find(c => isPoland(c.group));
+  group = pl ? pl.group : last ? last.group : state.favorites.length ? FAV : ALL;
   renderGroups(); renderList();
   if (channels.length === 1) play(channels[0]);
   else if (last) { play(last); const on = $('list').querySelector('.ch.on'); if (on) on.scrollIntoView({ block: 'center' }); }
@@ -164,12 +165,20 @@ function renderRecent() { $('recent').innerHTML = state.urls.map(u => `<option v
 
 /* ---------- UI ---------- */
 const isFav = c => state.favorites.some(f => f.key === c.key);
+const MIN_GROUP = 10;
+const isPoland = g => ['poland', 'polska', 'polskie', 'polish', 'pl'].includes(g.replace(/^\d+\.\s*/, '').trim().toLowerCase());
 function renderGroups() {
-  const names = [...new Set(channels.map(c => c.group))].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+  const counts = new Map();
+  channels.forEach(c => counts.set(c.group, (counts.get(c.group) || 0) + 1));
+  // ukrywamy małe grupy (kanały nadal są w „Wszystkie” i w wyszukiwarce), o ile istnieje choć jedna duża
+  const hasBig = [...counts.values()].some(n => n >= MIN_GROUP);
+  const names = [...counts.keys()]
+    .filter(g => !hasBig || counts.get(g) >= MIN_GROUP || g === group || isPoland(g))
+    .sort((x, y) => (isPoland(y) - isPoland(x)) || x.localeCompare(y, undefined, { numeric: true }));
   const opts = [FAV, ALL, ...names];
   if (!opts.includes(group)) group = ALL;
   $('group').innerHTML = opts.map(g => {
-    const n = g === FAV ? state.favorites.length : g === ALL ? channels.length : channels.filter(c => c.group === g).length;
+    const n = g === FAV ? state.favorites.length : g === ALL ? channels.length : counts.get(g);
     return `<option value="${esc(g)}"${g === group ? ' selected' : ''}>${esc(g)} (${n})</option>`;
   }).join('');
 }
