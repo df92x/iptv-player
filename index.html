@@ -68,7 +68,7 @@
 <script>
 const $ = id => document.getElementById(id);
 const FAV = '★ Ulubione', ALL = 'Wszystkie';
-let state = { urls: [], favorites: [] };   // favorites: {key,name,url,logo,group}
+let state = { urls: [], favorites: [], last: '' };   // favorites: {key,name,url,logo,group}
 let channels = [], group = ALL, current = null, hls = null;
 
 /* ---------- zapis stanu: tylko localStorage tej przeglądarki (nic nie trafia na serwer) ---------- */
@@ -132,9 +132,11 @@ function openText(text, url) {
     state.favorites.forEach(f => { const c = byKey.get(f.key); if (c) Object.assign(f, { url: c.url, logo: c.logo }); });
     saveState();
   }
-  group = state.favorites.length ? FAV : ALL;
+  const last = channels.find(c => c.key === state.last);
+  group = last ? last.group : state.favorites.length ? FAV : ALL;
   renderGroups(); renderList();
   if (channels.length === 1) play(channels[0]);
+  else if (last) { play(last); const on = $('list').querySelector('.ch.on'); if (on) on.scrollIntoView({ block: 'center' }); }
 }
 function rememberUrl(url) {
   state.urls = [url, ...state.urls.filter(u => u !== url)].slice(0, 10);
@@ -184,6 +186,7 @@ const esc = s => String(s).replace(/[&<>"]/g, m => ({ '&': '&amp;', '<': '&lt;',
 /* ---------- odtwarzanie ---------- */
 function play(c, attempt = 0) {
   current = c;
+  if (c.key !== state.last && channels.length > 1) { state.last = c.key; saveState(); }
   const v = $('v');
   const say = t => $('info').innerHTML = '<b>' + esc(c.name) + '</b>' + (t ? ' — ' + t : '');
   say('ładowanie…');
@@ -236,7 +239,7 @@ $('menu').onclick = () => {
 $('file').onchange = async e => {
   const f = e.target.files[0]; if (!f) return;
   const t = await f.text();
-  try { const j = JSON.parse(t); if (j.favorites) { state = { urls: j.urls || [], favorites: j.favorites }; saveState(); renderRecent(); renderGroups(); renderList(); return; } } catch {}
+  try { const j = JSON.parse(t); if (j.favorites) { state = { urls: j.urls || [], favorites: j.favorites, last: j.last || '' }; saveState(); renderRecent(); renderGroups(); renderList(); return; } } catch {}
   openText(t, '');
   e.target.value = '';
 };
