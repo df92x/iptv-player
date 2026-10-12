@@ -6,43 +6,53 @@
 <title>IPTV Player</title>
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
 <link rel="alternate icon" href="favicon.ico">
-<meta name="theme-color" content="#111418">
+<meta name="theme-color" content="#0d0f12">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
 <style>
-  :root { --bg:#111418; --panel:#1b2027; --line:#2a313b; --text:#e8ecf1; --dim:#8d97a5; --acc:#3da9fc; --star:#ffc933; }
+  :root { --bg:#0d0f12; --panel:#12151a; --surface:#1c2027; --line:#272c34; --text:#ece8e1; --dim:#8a919c; --acc:#ffb43a; --acc-ink:#1a1203; --star:#ffb43a; --live:#ff5a52;
+          --display:'Barlow Condensed','Arial Narrow',system-ui,sans-serif; }
   * { box-sizing: border-box; }
   html, body { height: 100%; margin: 0; overflow-x: hidden; }
   body { height: 100dvh; }
-  body { background: var(--bg); color: var(--text); font: 15px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif; display: flex; flex-direction: column; }
+  body { background: var(--bg); color: var(--text); font: 15px/1.45 'IBM Plex Sans', system-ui, -apple-system, "Segoe UI", sans-serif; display: flex; flex-direction: column; }
   header { display: flex; gap: 8px; padding: 10px; background: var(--panel); border-bottom: 1px solid var(--line); }
   header input { flex: 1; min-width: 0; }
   input, select, button { font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; }
-  button { cursor: pointer; background: var(--acc); border-color: var(--acc); color: #04121f; font-weight: 600; }
-  button.ghost { background: var(--bg); color: var(--text); border-color: var(--line); font-weight: 400; }
+  button { cursor: pointer; background: var(--acc); border-color: var(--acc); color: var(--acc-ink); font-weight: 600; }
+  button.ghost { background: var(--surface); color: var(--text); border-color: var(--line); font-weight: 400; }
   @media (max-width: 760px) {
     header { flex-wrap: wrap; }
     header input { flex: 1 1 100%; }
     header button { flex: 1 1 0; padding: 9px 6px; font-size: 14px; }
   }
-  main { flex: 1; display: grid; grid-template-columns: minmax(300px, 380px) minmax(0, 1fr); min-height: 0; min-width: 0; }
+  main { flex: 1; display: grid; grid-template-columns: minmax(300px, 380px) minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); min-height: 0; min-width: 0; }
   aside { display: flex; flex-direction: column; border-right: 1px solid var(--line); min-height: 0; min-width: 0; background: var(--panel); }
   .filters { display: flex; gap: 8px; padding: 10px; }
   .filters select, .filters input { flex: 1; min-width: 0; }
   #list { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
   .ch { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-bottom: 1px solid var(--line); cursor: pointer; }
-  .ch:hover { background: #222933; }
-  .ch.on { background: #16324a; }
-  .ch img { width: 40px; height: 28px; object-fit: contain; flex: none; background: #0003; border-radius: 4px; }
+  .ch:hover { background: var(--surface); }
+  .ch.on { background: var(--surface); box-shadow: inset 3px 0 0 var(--acc); }
+  .tile { position: relative; width: 36px; height: 36px; flex: none; display: grid; place-items: center; background: var(--bg); border: 1px solid var(--line); border-radius: 6px; overflow: hidden; font-family: var(--display); font-weight: 700; font-size: 15px; color: var(--dim); }
+  .tile::before { content: attr(data-i); }
+  .tile img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; background: var(--bg); }
+  .ch.on .tile { color: var(--acc); }
   .ch span.n { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .star { background: none; border: 0; color: var(--dim); font-size: 22px; padding: 0 4px; line-height: 1; font-weight: 400; }
   .star.on { color: var(--star); }
   #stage { display: flex; flex-direction: column; min-width: 0; background: #000; }
-  video { width: 100%; max-width: 100%; flex: 1; min-height: 0; min-width: 0; background: #000; }
+  video { width: 100%; max-width: 100%; flex: 1 1 0; height: 0; min-height: 0; min-width: 0; background: #000; }
+  #stage { min-height: 0; }
   #bar { display: flex; align-items: center; gap: 8px; padding: 6px 12px; background: var(--panel); min-height: 46px; }
   #info { flex: 1; min-width: 0; color: var(--dim); overflow: hidden; text-overflow: ellipsis; }
+  #info b { display: block; font-family: var(--display); font-size: 26px; font-weight: 700; letter-spacing: .02em; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #info .st { display: block; font-size: 13px; color: var(--acc); }
+  #info small { display: block; font-size: 12px; color: var(--dim); }
   #pip { flex: none; padding: 7px 12px; }
   #info b { color: var(--text); }
   .empty { padding: 20px; color: var(--dim); text-align: center; }
-  .sec { padding: 6px 12px; font-size: 12px; letter-spacing: .05em; text-transform: uppercase; color: var(--dim); background: #0004; border-bottom: 1px solid var(--line); }
+  .sec { padding: 14px 12px 6px; font-size: 12px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--dim); }
   .ch { transition: transform .12s; min-height: 48px; }
   button, select, input:not([type=range]) { min-height: 44px; }
   .star { min-width: 44px; }
@@ -81,20 +91,50 @@
   body.native #dvr.show { display: block; }
   #dvr .r { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
   #dvr button { flex: 1 1 0; min-width: 56px; padding: 9px 4px; background: #ffffff1a; color: #fff; border: 1px solid #ffffff22; font-weight: 600; }
-  #dvr button.live { background: #d93025; border-color: #d93025; }
-  #dvr button.live.on { background: #1e8e3e; border-color: #1e8e3e; }
+  #dvr button.live { background: var(--live); border-color: var(--live); color: #1a0605; }
+  #dvr button.live.on { background: #2e9e57; border-color: #2e9e57; color: #04170b; }
   #dvr select { flex: 1 1 0; min-width: 90px; padding: 8px 4px; background: #ffffff1a; color: #fff; border: 1px solid #ffffff22; border-radius: 8px; }
   #dvr select option { color: #000; }
-  #dvr input[type=range] { width: 100%; margin: 10px 0 2px; accent-color: #3da9fc; }
+  #dvr input[type=range] { width: 100%; margin: 10px 0 2px; accent-color: var(--acc); }
   #dvr .lab { font-size: 13px; color: #ddd; text-align: center; }
   #dvr.nodvr .rw, #dvr.nodvr input, #dvr.nodvr .live { display: none; }
   #toast { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); max-width: 80%; padding: 8px 14px; border-radius: 20px; background: #000b; color: #fff; pointer-events: none; opacity: 0; transition: opacity .2s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   #toast.show { opacity: 1; }
+  .brand { display: flex; align-items: center; gap: 10px; margin-right: 4px; color: var(--acc); }
+  .brand b { font-family: var(--display); font-weight: 700; font-size: 24px; letter-spacing: .06em; text-transform: uppercase; color: var(--text); }
+  .brand b i { font-style: normal; color: var(--acc); }
+  header { align-items: center; }
+  .chips { display: none; gap: 8px; padding: 0 10px 8px; overflow-x: auto; scrollbar-width: none; }
+  .chips::-webkit-scrollbar { display: none; }
+  .chip { flex: none; padding: 0 16px; border-radius: 22px; background: var(--surface); color: var(--text); border-color: var(--line); font-weight: 400; }
+  .chip.on { background: var(--acc); color: var(--acc-ink); border-color: var(--acc); font-weight: 600; }
+  /* panel cofania pod odtwarzaczem (przeglądarka); w aplikacji to nakładka na wideo */
+  body:not(.native) #dvr { position: static; display: block; background: var(--panel); border-top: 1px solid var(--line); border-radius: 0; padding: 12px 14px; }
+  body:not(.native):not(.playing) #dvr, body:not(.native).fs #dvr { display: none; }
+  body:not(.native) #bar { order: 1; }
+  body:not(.native) #dvr { order: 2; }
+  body:not(.native) #dvrmax, body:not(.native) #dvrpp { display: none; }
+  body:not(.native) #dvr .lab { text-align: left; }
+  /* Android TV: duże wiersze i wyraźny fokus */
+  body.tv { font-size: 20px; }
+  body.tv main { grid-template-columns: 420px minmax(0, 1fr); }
+  body.tv .ch { min-height: 72px; font-size: 24px; padding: 0 16px; }
+  body.tv .tile { width: 52px; height: 52px; font-size: 22px; }
+  body.tv #info b { font-size: 40px; }
+  body.tv .ch:focus, body.tv button:focus-visible { outline-width: 4px; }
+  body.tv .brand b { font-size: 32px; }
   @media (max-width: 760px) {
+    .brand { flex: 1 1 100%; }
+    .chips { display: flex; }
+    .filters #group { display: none; }
     main { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); }
     #stage { order: -1; }
-    video { aspect-ratio: 16/9; flex: none; }
+    video { aspect-ratio: 16/9; flex: none; height: auto; }
     aside { border-right: 0; }
+    /* panel cofania: kompaktowo, żeby lista kanałów zostawała widoczna */
+    body:not(.native) #dvr { padding: 8px 10px; }
+    #dvr [data-d="-300"], #dvr [data-d="300"], #dvr [data-d="-30"], #dvr [data-d="30"], body:not(.native) #dvr .lab { display: none; }
+    #dvr input[type=range] { margin: 6px 0; }
   }
   /* telefon poziomo podczas oglądania: obraz na cały ekran */
   @media (orientation: landscape) and (max-height: 520px) and (pointer: coarse) {
@@ -107,6 +147,10 @@
 </head>
 <body>
 <header>
+  <div class="brand">
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="7" width="18" height="12" rx="2.5"/><path d="M8 3l4 4 4-4"/></svg>
+    <b>IPTV <i>Player</i></b>
+  </div>
   <input id="url" type="url" placeholder="Wklej link do playlisty .m3u / .m3u8" autocomplete="off" aria-label="Link do playlisty">
   <button id="load">Wczytaj</button>
   <button id="saved" class="ghost" title="Zapisane listy">Moje listy</button>
@@ -120,6 +164,7 @@
       <select id="group" aria-label="Grupa kanałów"></select>
       <input id="q" type="search" placeholder="Szukaj…" aria-label="Szukaj kanału">
     </div>
+    <div id="chips" class="chips" aria-label="Grupy kanałów"></div>
     <div id="list"><div class="empty">Wklej link do playlisty i kliknij „Wczytaj”.</div></div>
   </aside>
   <section id="stage">
@@ -128,8 +173,8 @@
     <div id="toast"></div>
     <div id="dvr">
       <div class="r rw">
-        <button data-d="-300">⏪ 5 min</button><button data-d="-60">⏪ 60 s</button><button data-d="-30">⏪ 30 s</button><button data-d="-10">⏪ 10 s</button>
-        <button data-d="10">10 s ⏩</button><button data-d="30">30 s ⏩</button><button data-d="300">5 min ⏩</button>
+        <button data-d="-300">−5 min</button><button data-d="-60">−60 s</button><button data-d="-30">−30 s</button><button data-d="-10">−10 s</button>
+        <button data-d="10">+10 s</button><button data-d="30">+30 s</button><button data-d="300">+5 min</button>
       </div>
       <input id="dvrs" type="range" min="0" max="1" step="1" value="1" aria-label="Pozycja w buforze cofania">
       <div class="r">
@@ -143,8 +188,6 @@
       </div>
     </div>
     <div id="bar"><div id="info">Wybierz kanał z listy.</div><button id="pip" class="ghost" hidden>Obraz w obrazie</button>
-    <button id="wb" class="ghost web-only" title="Cofnij o 30 s (w granicach bufora przeglądarki)">⏪ 30 s</button>
-    <button id="wl" class="ghost web-only" title="Wróć na żywo">● Na żywo</button>
     <button id="pp" class="ghost" title="Odtwarzaj / pauza" aria-label="Odtwarzaj lub wstrzymaj">⏯</button>
     <button id="fs" class="ghost" title="Pełny ekran" aria-label="Pełny ekran">⛶</button></div>
   </section>
@@ -162,6 +205,7 @@ const $ = id => document.getElementById(id);
 const NP = (window.Capacitor && Capacitor.Plugins && Capacitor.Plugins.NativePlayer) || null;
 const NATIVE = !!NP;
 if (NATIVE) { document.documentElement.classList.add('native'); document.body.classList.add('native'); }
+if (/Android.*(\bTV\b|AFT|BRAVIA|SHIELD|MIBOX)|Leanback/i.test(navigator.userAgent)) document.body.classList.add('tv');
 const FAV = '★ Ulubione', ALL = 'Wszystkie';
 let state = { urls: [], favorites: [], recent: [], last: '' };   // favorites: {key,name,url,logo,group}
 let channels = [], group = ALL, current = null, hls = null;
@@ -282,6 +326,8 @@ function renderGroups() {
     const n = g === FAV ? state.favorites.length : g === ALL ? channels.length : counts.get(g);
     return `<option value="${esc(g)}"${g === group ? ' selected' : ''}>${esc(g)} (${n})</option>`;
   }).join('');
+  $('chips').innerHTML = [FAV, ...names.filter(isPoland), ALL, ...names.filter(g => !isPoland(g))].slice(0, 10).map(g =>
+    `<button class="chip${g === group ? ' on' : ''}" data-g="${esc(g)}">${esc(g.replace(/^\d+\.\s*/, ''))}</button>`).join('');
 }
 function visible() {
   const q = $('q').value.trim().toLowerCase();
@@ -307,7 +353,7 @@ function row(c, sortable, idx) {
   const d = document.createElement('div');
   d.className = 'ch' + (current && current.key === c.key ? ' on' : '');
   d.innerHTML = (sortable ? '<span class="grip" role="img" aria-label="Przeciągnij, aby zmienić kolejność" title="Przeciągnij, aby zmienić kolejność">⋮⋮</span>' : '') +
-    `<img loading="lazy" alt="" src="${esc(c.logo || '')}" onerror="this.style.visibility='hidden'"><span class="n">${esc(c.name)}</span><button class="star${isFav(c) ? ' on' : ''}" aria-pressed="${isFav(c)}" aria-label="${isFav(c) ? 'Usuń z ulubionych' : 'Dodaj do ulubionych'}: ${esc(c.name)}">${isFav(c) ? '★' : '☆'}</button>`;
+    `<span class="tile" data-i="${esc(initials(c.name))}"><img loading="lazy" alt="" src="${esc(c.logo || '')}" onerror="this.remove()"></span><span class="n">${esc(c.name)}</span><button class="star${isFav(c) ? ' on' : ''}" aria-pressed="${isFav(c)}" aria-label="${isFav(c) ? 'Usuń z ulubionych' : 'Dodaj do ulubionych'}: ${esc(c.name)}">${isFav(c) ? '★' : '☆'}</button>`;
   d.tabIndex = 0;
   d.onkeydown = e => { if (e.target === d && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); play(c); } };
   d.onclick = () => play(c);
@@ -348,6 +394,11 @@ function toggleFav(c) {
   else state.favorites.push({ key: c.key, name: c.name, url: c.url, logo: c.logo, group: c.group });
   saveState(); renderGroups(); renderList();
 }
+const initials = n => {
+  const t = String(n).replace(/^[A-Za-z]{2}:\s*/, '').replace(/\(.*?\)/g, '').trim();
+  const w = t.split(/\s+/).filter(Boolean);
+  return (w.length >= 2 ? w.slice(0, 3).map(x => x[0]).join('') : t.slice(0, 3)).toUpperCase();
+};
 const esc = s => String(s).replace(/[&<>"]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[m]));
 
 /* ---------- odtwarzanie ---------- */
@@ -360,7 +411,7 @@ function play(c, attempt = 0) {
   }
   document.body.classList.add('playing');
   const v = $('v');
-  const say = t => $('info').innerHTML = '<b>' + esc(c.name) + '</b>' + (t ? ' — ' + t : '');
+  const say = t => $('info').innerHTML = '<b>' + esc(c.name) + '</b>' + (t ? '<span class="st">' + t + '</span>' : '');
   say('ładowanie…');
   if (hls) { hls.destroy(); hls = null; }
   v.removeAttribute('src');
@@ -391,6 +442,11 @@ document.addEventListener('click', e => { if (!$('lists').hidden && !$('lists').
 $('pub').onclick = () => loadPlaylist('public-channels.m3u', true);
 $('url').addEventListener('keydown', e => e.key === 'Enter' && loadPlaylist($('url').value));
 $('group').onchange = e => { group = e.target.value; renderList(); };
+$('chips').onclick = e => {
+  const b = e.target.closest('.chip');
+  if (!b) return;
+  group = b.dataset.g; renderGroups(); renderList();
+};
 $('q').oninput = renderList;
 
 /* ---------- poprzedni / następny kanał ---------- */
@@ -455,15 +511,34 @@ try {
 if (!NATIVE && window.MediaSource && MediaSource.prototype.setLiveSeekableRange) {
   MediaSource.prototype.setLiveSeekableRange = function () {};
 }
-$('wb').onclick = () => {
-  const v = $('v'); if (!v.buffered.length) return;
-  v.currentTime = Math.max(v.buffered.start(0), v.currentTime - 30);
-};
-$('wl').onclick = () => {
-  const v = $('v'); if (!v.buffered.length) return;
-  v.currentTime = v.buffered.end(v.buffered.length - 1) - 1;
-  v.play().catch(() => {});
-};
+if (!NATIVE) {
+  const v = $('v'), slider = $('dvrs'), lab = $('dvrl'), liveBtn = $('dvrlive');
+  let drag = false;
+  const range = () => v.buffered.length ? [v.buffered.start(0), v.buffered.end(v.buffered.length - 1)] : null;
+  const fmt = sec => { sec = Math.round(sec); return Math.floor(sec / 60) + ':' + String(sec % 60).padStart(2, '0'); };
+  document.querySelectorAll('#dvr button[data-d]').forEach(btn => btn.onclick = () => {
+    const r = range(); if (!r) return;
+    v.currentTime = Math.min(r[1] - 1, Math.max(r[0], v.currentTime + (+btn.dataset.d)));
+  });
+  liveBtn.onclick = () => {
+    const r = range(); if (!r) return;
+    v.currentTime = r[1] - 1;
+    v.play().catch(() => {});
+  };
+  slider.addEventListener('input', () => { drag = true; });
+  slider.addEventListener('change', () => { const r = range(); if (r) v.currentTime = r[0] + (+slider.value); drag = false; });
+  setInterval(() => {
+    const r = range();
+    if (!r || drag) return;
+    const span = Math.max(1, Math.floor(r[1] - r[0]));
+    slider.max = span;
+    slider.value = Math.max(0, Math.min(span, Math.round(v.currentTime - r[0])));
+    const behind = Math.max(0, r[1] - v.currentTime);
+    const live = behind < 8;
+    liveBtn.classList.toggle('on', live);
+    lab.textContent = live ? 'NA ŻYWO (bufor ' + fmt(span) + ')' : '−' + fmt(behind) + ' za transmisją';
+  }, 500);
+}
 
 /* ---------- natywny odtwarzacz (aplikacja Android) ---------- */
 let lastRect = '', audioInfo = '';
@@ -484,8 +559,8 @@ if (NATIVE) {
   const paint = () => {
     if (!current) return;
     const t = { playing: '', buffering: 'buforowanie…', paused: 'pauza', error: 'nie udało się odtworzyć', ended: 'koniec transmisji' }[nstate] || '';
-    $('info').innerHTML = '<b>' + esc(current.name) + '</b>' + (t ? ' — ' + t : '') +
-      (audioInfo ? '<br><small>VLC · ' + esc(audioInfo) + '</small>' : '');
+    $('info').innerHTML = '<b>' + esc(current.name) + '</b>' + (t ? '<span class="st">' + t + '</span>' : '') +
+      (audioInfo ? '<small>VLC · ' + esc(audioInfo) + '</small>' : '');
   };
   NP.addListener('state', e => {
     if (e.state === 'info') audioInfo = e.text || ''; else nstate = e.state;
