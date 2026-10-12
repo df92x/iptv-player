@@ -43,7 +43,16 @@
   #info b { color: var(--text); }
   .empty { padding: 20px; color: var(--dim); text-align: center; }
   .sec { padding: 6px 12px; font-size: 12px; letter-spacing: .05em; text-transform: uppercase; color: var(--dim); background: #0004; border-bottom: 1px solid var(--line); }
-  .ch { transition: transform .12s; }
+  .ch { transition: transform .12s; min-height: 48px; }
+  button, select, input:not([type=range]) { min-height: 44px; }
+  .star { min-width: 44px; }
+  .grip { min-width: 36px; min-height: 44px; display: flex; align-items: center; justify-content: center; }
+  #lists .x { min-width: 44px; min-height: 44px; }
+  #mpop { position: fixed; z-index: 30; top: 58px; right: 10px; min-width: 260px; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 8px 24px #0009; padding: 6px; }
+  #mpop[hidden] { display: none; }
+  #mpop button { display: block; width: 100%; text-align: left; margin: 0; background: transparent; border-color: transparent; color: var(--text); font-weight: 400; }
+  #mpop button:hover { background: #222933; }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
   .grip { flex: none; color: var(--dim); font-size: 18px; line-height: 1; padding: 6px 4px; cursor: grab; touch-action: none; user-select: none; }
   .ch.drag { position: relative; z-index: 3; transition: none; background: #2a3646; box-shadow: 0 4px 14px #0008; cursor: grabbing; }
   #stage { position: relative; }
@@ -98,34 +107,34 @@
 </head>
 <body>
 <header>
-  <input id="url" type="url" placeholder="Wklej link do playlisty .m3u / .m3u8" autocomplete="off">
+  <input id="url" type="url" placeholder="Wklej link do playlisty .m3u / .m3u8" autocomplete="off" aria-label="Link do playlisty">
   <button id="load">Wczytaj</button>
   <button id="saved" class="ghost" title="Zapisane listy">Moje listy</button>
   <button id="pub" class="ghost" title="Darmowe, publicznie dostępne kanały z całego świata">Lista publiczna</button>
-  <button id="menu" class="ghost" title="Plik / kopia ulubionych">⋯</button>
+  <button id="menu" class="ghost" title="Plik / kopia ulubionych" aria-label="Więcej opcji" aria-haspopup="true">⋯</button>
 </header>
 <div id="lists" hidden></div>
 <main>
   <aside>
     <div class="filters">
-      <select id="group"></select>
-      <input id="q" type="search" placeholder="Szukaj…">
+      <select id="group" aria-label="Grupa kanałów"></select>
+      <input id="q" type="search" placeholder="Szukaj…" aria-label="Szukaj kanału">
     </div>
     <div id="list"><div class="empty">Wklej link do playlisty i kliknij „Wczytaj”.</div></div>
   </aside>
   <section id="stage">
     <video id="v" controls controlsList="nofullscreen" playsinline autoplay poster="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"></video>
-    <button id="fsx" class="ghost" title="Wyjdź z pełnego ekranu">✕</button>
+    <button id="fsx" class="ghost" title="Wyjdź z pełnego ekranu" aria-label="Wyjdź z pełnego ekranu">✕</button>
     <div id="toast"></div>
     <div id="dvr">
       <div class="r rw">
         <button data-d="-300">⏪ 5 min</button><button data-d="-60">⏪ 60 s</button><button data-d="-30">⏪ 30 s</button><button data-d="-10">⏪ 10 s</button>
         <button data-d="10">10 s ⏩</button><button data-d="30">30 s ⏩</button><button data-d="300">5 min ⏩</button>
       </div>
-      <input id="dvrs" type="range" min="0" max="1" step="1" value="1">
+      <input id="dvrs" type="range" min="0" max="1" step="1" value="1" aria-label="Pozycja w buforze cofania">
       <div class="r">
-        <button id="dvrpp">⏯</button>
-        <select id="dvrmax" title="Jak długo wstecz można cofać (bufor na dysku)">
+        <button id="dvrpp" aria-label="Odtwarzaj lub wstrzymaj">⏯</button>
+        <select id="dvrmax" title="Jak długo wstecz można cofać (bufor na dysku)" aria-label="Długość bufora cofania">
           <option value="300">bufor 5 min</option><option value="900">15 min</option>
           <option value="1800">30 min</option><option value="3600">60 min</option>
         </select>
@@ -136,10 +145,14 @@
     <div id="bar"><div id="info">Wybierz kanał z listy.</div><button id="pip" class="ghost" hidden>Obraz w obrazie</button>
     <button id="wb" class="ghost web-only" title="Cofnij o 30 s (w granicach bufora przeglądarki)">⏪ 30 s</button>
     <button id="wl" class="ghost web-only" title="Wróć na żywo">● Na żywo</button>
-    <button id="pp" class="ghost" title="Odtwarzaj / pauza">⏯</button>
-    <button id="fs" class="ghost" title="Pełny ekran">⛶</button></div>
+    <button id="pp" class="ghost" title="Odtwarzaj / pauza" aria-label="Odtwarzaj lub wstrzymaj">⏯</button>
+    <button id="fs" class="ghost" title="Pełny ekran" aria-label="Pełny ekran">⛶</button></div>
   </section>
 </main>
+<div id="mpop" role="menu" hidden>
+  <button id="m-file" role="menuitem">Wczytaj plik (playlista lub kopia ulubionych)…</button>
+  <button id="m-save" role="menuitem">Zapisz kopię ulubionych</button>
+</div>
 <input id="file" type="file" accept=".m3u,.m3u8,.txt,.json" hidden>
 
 <script src="hls.min.js"></script>
@@ -199,9 +212,7 @@ async function loadPlaylist(url, pub = false) {
       text = (await NP.fetchText({ url })).text;
       if (!text) throw new Error('brak odpowiedzi serwera');
     } else {
-    let r;
-    try { r = await fetch(url); }                                   // bezpośrednio (dostawca ma CORS)
-    catch { r = await fetch('/proxy?url=' + encodeURIComponent(url)); }   // zapas: lokalny serwer
+    const r = await fetch(url);                                      // bezpośrednio (dostawca ma CORS)
     if (!r.ok) throw new Error('HTTP ' + r.status);
     text = await r.text();
     }
@@ -295,8 +306,8 @@ function renderList() {
 function row(c, sortable, idx) {
   const d = document.createElement('div');
   d.className = 'ch' + (current && current.key === c.key ? ' on' : '');
-  d.innerHTML = (sortable ? '<span class="grip" title="Przeciągnij, aby zmienić kolejność">⋮⋮</span>' : '') +
-    `<img loading="lazy" alt="" src="${esc(c.logo || '')}" onerror="this.style.visibility='hidden'"><span class="n">${esc(c.name)}</span><button class="star${isFav(c) ? ' on' : ''}">${isFav(c) ? '★' : '☆'}</button>`;
+  d.innerHTML = (sortable ? '<span class="grip" role="img" aria-label="Przeciągnij, aby zmienić kolejność" title="Przeciągnij, aby zmienić kolejność">⋮⋮</span>' : '') +
+    `<img loading="lazy" alt="" src="${esc(c.logo || '')}" onerror="this.style.visibility='hidden'"><span class="n">${esc(c.name)}</span><button class="star${isFav(c) ? ' on' : ''}" aria-pressed="${isFav(c)}" aria-label="${isFav(c) ? 'Usuń z ulubionych' : 'Dodaj do ulubionych'}: ${esc(c.name)}">${isFav(c) ? '★' : '☆'}</button>`;
   d.tabIndex = 0;
   d.onkeydown = e => { if (e.target === d && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); play(c); } };
   d.onclick = () => play(c);
@@ -531,13 +542,23 @@ pipBtn.onclick = async () => {
   } catch (e) { alert('Obraz w obrazie niedostępny: ' + e.message); }
 };
 
-$('menu').onclick = () => {
-  const a = prompt('Wpisz: 1 = wczytaj plik playlisty / kopię ulubionych, 2 = zapisz kopię ulubionych', '1');
-  if (a === '1') $('file').click();
-  if (a === '2') {
-    const b = new Blob([JSON.stringify(state, null, 1)], { type: 'application/json' });
-    const l = document.createElement('a'); l.href = URL.createObjectURL(b); l.download = 'iptv-backup.json'; l.click();
-  }
+const mpop = $('mpop');
+const closeMenu = () => { mpop.hidden = true; $('menu').setAttribute('aria-expanded', 'false'); };
+$('menu').onclick = e => {
+  e.stopPropagation();
+  mpop.hidden = !mpop.hidden;
+  $('menu').setAttribute('aria-expanded', String(!mpop.hidden));
+  if (!mpop.hidden) $('m-file').focus();
+};
+document.addEventListener('click', e => { if (!mpop.hidden && !mpop.contains(e.target)) closeMenu(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && !mpop.hidden) { closeMenu(); $('menu').focus(); } });
+$('m-file').onclick = () => { closeMenu(); $('file').click(); };
+$('m-save').onclick = () => {
+  closeMenu();
+  const blob = new Blob([JSON.stringify(state, null, 1)], { type: 'application/json' });
+  const l = document.createElement('a');
+  l.href = URL.createObjectURL(blob); l.download = 'iptv-backup.json'; l.click();
+  setTimeout(() => URL.revokeObjectURL(l.href), 1000);
 };
 $('file').onchange = async e => {
   const f = e.target.files[0]; if (!f) return;
