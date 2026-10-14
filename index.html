@@ -22,9 +22,11 @@
   button { cursor: pointer; background: var(--acc); border-color: var(--acc); color: var(--acc-ink); font-weight: 600; }
   button.ghost { background: var(--surface); color: var(--text); border-color: var(--line); font-weight: 400; }
   @media (max-width: 760px) {
-    header { flex-wrap: wrap; }
-    header input { flex: 1 1 100%; }
-    header button { flex: 1 1 0; padding: 9px 6px; font-size: 14px; }
+    header { padding: 8px; gap: 6px; }
+    header nav.top button { padding: 0 7px; font-size: 13px; }
+    .brand { gap: 6px; margin-right: 0; }
+    .brand svg { width: 22px; height: 22px; }
+    .brand b { font-size: 19px; letter-spacing: .03em; }
   }
   main { flex: 1; display: grid; grid-template-columns: minmax(300px, 380px) minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); min-height: 0; min-width: 0; }
   aside { display: flex; flex-direction: column; border-right: 1px solid var(--line); min-height: 0; min-width: 0; background: var(--panel); }
@@ -48,7 +50,8 @@
   #info { flex: 1; min-width: 0; color: var(--dim); overflow: hidden; text-overflow: ellipsis; }
   #info b { display: block; font-family: var(--display); font-size: 26px; font-weight: 700; letter-spacing: .02em; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   #info .st { display: block; font-size: 13px; color: var(--acc); }
-  #info small { display: block; font-size: 12px; color: var(--dim); }
+  #info small { display: block; font-size: 13px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #info small span { color: var(--acc); margin-right: 8px; font-weight: 600; }
   #pip { flex: none; padding: 7px 12px; }
   #info b { color: var(--text); }
   .empty { padding: 20px; color: var(--dim); text-align: center; }
@@ -58,16 +61,25 @@
   .star { min-width: 44px; }
   .grip { min-width: 36px; min-height: 44px; display: flex; align-items: center; justify-content: center; }
   #lists .x { min-width: 44px; min-height: 44px; }
-  #mpop { position: fixed; z-index: 30; top: 58px; right: 10px; min-width: 260px; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 8px 24px #0009; padding: 6px; }
-  #mpop[hidden] { display: none; }
-  #mpop button { display: block; width: 100%; text-align: left; margin: 0; background: transparent; border-color: transparent; color: var(--text); font-weight: 400; }
-  #mpop button:hover { background: #222933; }
+  body.native #bar #pip, body.native #bar #fs { display: none; }   /* w aplikacji te przyciski są na nakładce odtwarzacza */
+  header nav.top { display: flex; align-items: center; gap: 6px; margin-left: auto; }
+  header nav.top button { min-height: 0; height: 30px; padding: 0 10px; font-size: 15px; line-height: 1; white-space: nowrap; }
+  #settings { position: fixed; inset: 0; z-index: 30; background: var(--bg); overflow-y: auto; -webkit-overflow-scrolling: touch; }
+  #settings[hidden] { display: none; }
+  #settings .sheet { max-width: 560px; margin: 0 auto; padding: 0 12px 28px; }
+  #settings .sh-head { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; position: sticky; top: 0; background: var(--bg); }
+  #settings h2 { margin: 0; font-size: 20px; }
+  #settings h3 { margin: 18px 0 8px; font-size: 12px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--dim); }
+  #settings .add { display: flex; gap: 8px; margin-top: 10px; }
+  #settings .add input { flex: 1; min-width: 0; }
+  #settings .wide { display: block; width: 100%; text-align: left; margin-bottom: 8px; }
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
   .grip { flex: none; color: var(--dim); font-size: 18px; line-height: 1; padding: 6px 4px; cursor: grab; touch-action: none; user-select: none; }
   .ch.drag { position: relative; z-index: 3; transition: none; background: #2a3646; box-shadow: 0 4px 14px #0008; cursor: grabbing; }
   #stage { position: relative; }
-  #lists { position: fixed; z-index: 30; top: 58px; left: 10px; right: 10px; max-width: 520px; max-height: 60vh; overflow-y: auto; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 8px 24px #0009; }
-  #lists[hidden] { display: none; }
+  #lists { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+  #lists .empty { padding: 14px 12px; }
+  #lists .li .on { color: var(--acc); font-weight: 600; margin-left: 8px; }
   #lists .li { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--line); cursor: pointer; }
   #lists .li:last-child { border-bottom: 0; }
   #lists .li:hover { background: #222933; }
@@ -80,8 +92,6 @@
   body.fs main { display: block; }
   body.fs #stage { position: fixed; inset: 0; z-index: 10; }
   body.fs video { width: 100%; height: 100%; aspect-ratio: auto; flex: 1; }
-  #fsx { position: absolute; top: 10px; right: 10px; z-index: 11; display: none; background: #000a; color: #fff; border-color: #fff4; }
-  body.fs #fsx { display: block; }
   html.native, html.native body { background: transparent; }
   body.native #stage, body.native video { background: transparent; }
   #pp { display: none; }
@@ -96,7 +106,10 @@
   #dvr select { flex: 1 1 0; min-width: 90px; padding: 8px 4px; background: #ffffff1a; color: #fff; border: 1px solid #ffffff22; border-radius: 8px; }
   #dvr select option { color: #000; }
   #dvr input[type=range] { width: 100%; margin: 10px 0 2px; accent-color: var(--acc); }
-  #dvr .lab { font-size: 13px; color: #ddd; text-align: center; }
+  #dvr .lab { font-size: 14px; color: #fff; text-align: center; font-weight: 600; text-shadow: 0 1px 2px #000; }
+  body.native #dvr { background: #000d; padding: 8px; }
+  body.native #dvr button { font-size: 20px; line-height: 1; min-height: 44px; }
+  body.native #dvr button.live { font-size: 14px; }
   #dvr.nodvr .rw, #dvr.nodvr input, #dvr.nodvr .live { display: none; }
   #toast { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); max-width: 80%; padding: 8px 14px; border-radius: 20px; background: #000b; color: #fff; pointer-events: none; opacity: 0; transition: opacity .2s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   #toast.show { opacity: 1; }
@@ -113,7 +126,7 @@
   body:not(.native):not(.playing) #dvr, body:not(.native).fs #dvr { display: none; }
   body:not(.native) #bar { order: 1; }
   body:not(.native) #dvr { order: 2; }
-  body:not(.native) #dvrmax, body:not(.native) #dvrpp { display: none; }
+  body:not(.native) #dvrpp, body:not(.native) #dvrstop, body:not(.native) #dvrpip, body:not(.native) #dvrfs { display: none; }
   body:not(.native) #dvr .lab { text-align: left; }
   /* Android TV: duże wiersze i wyraźny fokus */
   body.tv { font-size: 20px; }
@@ -124,7 +137,7 @@
   body.tv .ch:focus, body.tv button:focus-visible { outline-width: 4px; }
   body.tv .brand b { font-size: 32px; }
   @media (max-width: 760px) {
-    .brand { flex: 1 1 100%; }
+    .brand { flex: none; }
     .chips { display: flex; }
     .filters #group { display: none; }
     main { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); }
@@ -151,13 +164,10 @@
     <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="7" width="18" height="12" rx="2.5"/><path d="M8 3l4 4 4-4"/></svg>
     <b>IPTV <i>Player</i></b>
   </div>
-  <input id="url" type="url" placeholder="Wklej link do playlisty .m3u / .m3u8" autocomplete="off" aria-label="Link do playlisty">
-  <button id="load">Wczytaj</button>
-  <button id="saved" class="ghost" title="Zapisane listy">Moje listy</button>
-  <button id="pub" class="ghost" title="Darmowe, publicznie dostępne kanały z całego świata">Lista publiczna</button>
-  <button id="menu" class="ghost" title="Plik / kopia ulubionych" aria-label="Więcej opcji" aria-haspopup="true">⋯</button>
+  <nav class="top">
+    <button id="set" class="ghost" title="Listy, kopia ulubionych" aria-haspopup="dialog">⚙ Ustawienia</button>
+  </nav>
 </header>
-<div id="lists" hidden></div>
 <main>
   <aside>
     <div class="filters">
@@ -165,11 +175,10 @@
       <input id="q" type="search" placeholder="Szukaj…" aria-label="Szukaj kanału">
     </div>
     <div id="chips" class="chips" aria-label="Grupy kanałów"></div>
-    <div id="list"><div class="empty">Wklej link do playlisty i kliknij „Wczytaj”.</div></div>
+    <div id="list"><div class="empty">Otwórz Ustawienia, aby dodać playlistę lub włączyć listę publiczną.</div></div>
   </aside>
   <section id="stage">
     <video id="v" controls controlsList="nofullscreen" playsinline autoplay poster="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"></video>
-    <button id="fsx" class="ghost" title="Wyjdź z pełnego ekranu" aria-label="Wyjdź z pełnego ekranu">✕</button>
     <div id="toast"></div>
     <div id="dvr">
       <div class="r rw">
@@ -179,22 +188,30 @@
       <input id="dvrs" type="range" min="0" max="1" step="1" value="1" aria-label="Pozycja w buforze cofania">
       <div class="r">
         <button id="dvrpp" aria-label="Odtwarzaj lub wstrzymaj">⏯</button>
-        <select id="dvrmax" title="Jak długo wstecz można cofać (bufor na dysku)" aria-label="Długość bufora cofania">
-          <option value="300">bufor 5 min</option><option value="900">15 min</option>
-          <option value="1800">30 min</option><option value="3600">60 min</option>
-        </select>
+        <button id="dvrstop" aria-label="Zatrzymaj">⏹</button>
+        <button id="dvrpip" aria-label="Obraz w obrazie" title="Obraz w obrazie">⧉</button>
+        <button id="dvrfs" aria-label="Pełny ekran" title="Pełny ekran">⛶</button>
         <span class="lab" id="dvrl" style="flex:3">NA ŻYWO</span>
         <button class="live on" id="dvrlive">● NA ŻYWO</button>
       </div>
     </div>
     <div id="bar"><div id="info">Wybierz kanał z listy.</div><button id="pip" class="ghost" hidden>Obraz w obrazie</button>
-    <button id="pp" class="ghost" title="Odtwarzaj / pauza" aria-label="Odtwarzaj lub wstrzymaj">⏯</button>
     <button id="fs" class="ghost" title="Pełny ekran" aria-label="Pełny ekran">⛶</button></div>
   </section>
 </main>
-<div id="mpop" role="menu" hidden>
-  <button id="m-file" role="menuitem">Wczytaj plik (playlista lub kopia ulubionych)…</button>
-  <button id="m-save" role="menuitem">Zapisz kopię ulubionych</button>
+<div id="settings" role="dialog" aria-modal="true" aria-labelledby="set-title" hidden>
+  <div class="sheet">
+    <div class="sh-head"><h2 id="set-title">Ustawienia</h2><button id="set-close" class="ghost" aria-label="Zamknij ustawienia">✕</button></div>
+    <h3>Moje listy</h3>
+    <div id="lists"></div>
+    <div class="add">
+      <input id="url" type="url" placeholder="Wklej link do playlisty .m3u / .m3u8" autocomplete="off" aria-label="Link do nowej playlisty">
+      <button id="load">Dodaj</button>
+    </div>
+    <h3>Kopia i pliki</h3>
+    <button id="m-file" class="ghost wide">Wczytaj plik (playlista lub kopia ulubionych)…</button>
+    <button id="m-save" class="ghost wide">Zapisz kopię ulubionych</button>
+  </div>
 </div>
 <input id="file" type="file" accept=".m3u,.m3u8,.txt,.json" hidden>
 
@@ -248,7 +265,6 @@ async function loadPlaylist(url, pub = false) {
   url = url.trim(); if (!url) return;
   $('list').innerHTML = '<div class="empty">Wczytuję…</div>';
   url = secure(url);
-  if (!pub) $('url').value = url;
   state.pub = pub;
   let text;
   try {
@@ -270,6 +286,8 @@ function openText(text, url) {
   } else {
     channels = parseM3U(text);
     channels.forEach(c => { c.url = secure(c.url); c.logo = secure(c.logo); });
+    const tvg = (text.match(/url-tvg="([^"]+)"/i) || [])[1];            // program TV z nagłówka playlisty
+    if (NATIVE && tvg) NP.epgSource({ url: secure(tvg) }).catch(() => {});
     if (!channels.length) { $('list').innerHTML = '<div class="empty">Brak kanałów w tej playlistce.</div>'; return; }
     // odśwież adresy ulubionych (tokeny) na podstawie świeżej playlisty
     const byKey = new Map(channels.map(c => [c.key, c]));
@@ -293,19 +311,23 @@ function listLabel(u) {            // bez tokenu w query — tylko host i ście�
 }
 function renderRecent() {
   const box = $('lists');
-  if (!state.urls.length) { box.innerHTML = '<div class="empty">Brak zapisanych list — wpisz link i kliknij „Wczytaj”.</div>'; return; }
   box.innerHTML = '';
-  state.urls.forEach(u => {
-    const l = listLabel(u), d = document.createElement('div');
+  const row = (title, sub, active, pick, remove) => {
+    const d = document.createElement('div');
     d.className = 'li';
-    d.innerHTML = '<span class="t">' + esc(l.host) + '<small>' + esc(l.path) + '</small></span><button class="x" title="Usuń z listy">✕</button>';
-    d.onclick = () => { $('lists').hidden = true; $('url').value = u; loadPlaylist(u); };
-    d.querySelector('.x').onclick = e => {
-      e.stopPropagation();
-      state.urls = state.urls.filter(x => x !== u); saveState(); renderRecent();
-    };
+    d.innerHTML = '<span class="t">' + esc(title) + (active ? '<span class="on">✓ aktywna</span>' : '') + (sub ? '<small>' + esc(sub) + '</small>' : '') + '</span>' +
+      (remove ? '<button class="x" title="Usuń playlistę" aria-label="Usuń playlistę">✕</button>' : '');
+    d.onclick = pick;
+    if (remove) d.querySelector('.x').onclick = e => { e.stopPropagation(); remove(); };
     box.appendChild(d);
+  };
+  row('Lista publiczna', 'Darmowe kanały z całego świata', state.pub, () => { closeSettings(); loadPlaylist('public-channels.m3u', true); });
+  state.urls.forEach((u, i) => {
+    const l = listLabel(u);
+    row(l.host, l.path, !state.pub && i === 0, () => { closeSettings(); loadPlaylist(u); },
+      () => { state.urls = state.urls.filter(x => x !== u); saveState(); renderRecent(); });
   });
+  if (!state.urls.length) { const e = document.createElement('div'); e.className = 'empty'; e.textContent = 'Brak własnych playlist — wklej link poniżej i kliknij „Dodaj”.'; box.appendChild(e); }
 }
 
 /* ---------- UI ---------- */
@@ -436,11 +458,21 @@ function play(c, attempt = 0) {
 }
 
 /* ---------- zdarzenia ---------- */
-$('load').onclick = () => loadPlaylist($('url').value);
-$('saved').onclick = e => { e.stopPropagation(); renderRecent(); $('lists').hidden = !$('lists').hidden; };
-document.addEventListener('click', e => { if (!$('lists').hidden && !$('lists').contains(e.target)) $('lists').hidden = true; });
-$('pub').onclick = () => loadPlaylist('public-channels.m3u', true);
-$('url').addEventListener('keydown', e => e.key === 'Enter' && loadPlaylist($('url').value));
+const settings = $('settings');
+function openSettings() { renderRecent(); settings.hidden = false; $('set-close').focus(); }
+function closeSettings() { settings.hidden = true; }
+function addPlaylist() {
+  const u = $('url').value.trim();
+  if (!u) return;
+  $('url').value = '';
+  closeSettings();
+  loadPlaylist(u);
+}
+$('set').onclick = openSettings;
+$('set-close').onclick = closeSettings;
+$('load').onclick = addPlaylist;
+$('url').addEventListener('keydown', e => e.key === 'Enter' && addPlaylist());
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && !settings.hidden) closeSettings(); });
 $('group').onchange = e => { group = e.target.value; renderList(); };
 $('chips').onclick = e => {
   const b = e.target.closest('.chip');
@@ -493,14 +525,13 @@ function setFs(on) {
   else if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
 }
 $('fs').onclick = () => setFs(!document.body.classList.contains('fs'));
-$('fsx').onclick = () => setFs(false);
 document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement) { document.body.classList.remove('fs'); if (NATIVE) NP.immersive({ on: false }).catch(() => {}); } });
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && document.body.classList.contains('fs')) setFs(false); });
 try {
   const App = window.Capacitor && Capacitor.Plugins && Capacitor.Plugins.App;
   if (App) App.addListener('backButton', () => {
     if (document.body.classList.contains('fs')) setFs(false);
-    else if (!$('lists').hidden) $('lists').hidden = true;
+    else if (!$('settings').hidden) $('settings').hidden = true;
     else App.exitApp();
   });
 } catch {}
@@ -542,12 +573,12 @@ if (!NATIVE) {
 
 /* ---------- natywny odtwarzacz (aplikacja Android) ---------- */
 let lastRect = '', audioInfo = '';
-function dvrSeconds() {
-  try { return +(localStorage.getItem('iptv.dvr') || 1800) || 1800; } catch { return 1800; }
-}
+function dvrSeconds() { return 300; }   // bufor cofania: stałe 5 min
 function syncRect() {
   if (!NATIVE) return;
   const r = $('v').getBoundingClientRect(), d = window.devicePixelRatio || 1;
+  const sb = $('stage').getBoundingClientRect();           // nakładka przy dolnej krawędzi obrazu, nie całego bloku z paskiem nazwy
+  $('dvr').style.bottom = Math.max(8, Math.round(sb.bottom - r.bottom + 8)) + 'px';
   const key = [r.left, r.top, r.width, r.height, d].map(n => Math.round(n * d)).join(',');
   if (key === lastRect) return;
   lastRect = key;
@@ -555,31 +586,43 @@ function syncRect() {
 }
 if (NATIVE) {
   $('v').removeAttribute('controls');
-  let nstate = 'playing';
+  let nstate = 'playing', stopped = false;
+  let epgKey = '', epgAt = 0, epgNow = null, epgNext = null;
+  const hm = ms => new Date(ms).toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' });
   const paint = () => {
     if (!current) return;
-    const t = { playing: '', buffering: 'buforowanie…', paused: 'pauza', error: 'nie udało się odtworzyć', ended: 'koniec transmisji' }[nstate] || '';
-    $('info').innerHTML = '<b>' + esc(current.name) + '</b>' + (t ? '<span class="st">' + t + '</span>' : '') +
-      (audioInfo ? '<small>VLC · ' + esc(audioInfo) + '</small>' : '');
+    const t = { playing: '', buffering: 'buforowanie…', paused: 'pauza', stopped: 'zatrzymano', error: 'nie udało się odtworzyć', ended: 'koniec transmisji' }[nstate] || '';
+    const line = (lbl, p) => p ? '<small><span>' + lbl + '</span>' + hm(p.s) + ' ' + esc(p.t) + '</small>' : '';
+    const epg = epgKey === current.key ? line('Teraz', epgNow) + line('Dalej', epgNext) : '';
+    $('info').innerHTML = '<b>' + esc(current.name) + '</b>' + (t ? '<span class="st">' + t + '</span>' : '') + epg;
   };
   NP.addListener('state', e => {
-    if (e.state === 'info') audioInfo = e.text || ''; else nstate = e.state;
+    if (e.state === 'resync') { lastRect = ''; syncRect(); return; }   // po powrocie z obrazu w obrazie / z tła
+    if (e.state === 'info') return;                                    // szczegóły techniczne nie są pokazywane
+    nstate = e.state;
+    if (e.state === 'playing') stopped = false;
     paint();
   });
+  // program TV: co leci teraz i co dalej (dane z url-tvg playlisty, pobierane natywnie)
+  setInterval(async () => {
+    if (!current) return;
+    const k = current.key;
+    if (k === epgKey && Date.now() - epgAt < 60000) return;
+    if (k !== epgKey) { epgNow = epgNext = null; }
+    epgKey = k; epgAt = Date.now();
+    try {
+      const r = await NP.epg({ id: k });
+      if (current.key !== k) return;
+      epgNow = r.now || null; epgNext = r.next || null;
+      paint();
+    } catch {}
+  }, 3000);
   new ResizeObserver(syncRect).observe($('v'));
   new ResizeObserver(syncRect).observe(document.body);
   addEventListener('resize', syncRect);
   setInterval(syncRect, 400);
-  $('pp').onclick = () => NP.toggle().catch(() => {});
 
-  // nakładka z cofaniem: dotknięcie obrazu pokazuje/ukrywa ją
-  const mx = $('dvrmax');
-  mx.value = String(dvrSeconds());
-  if (mx.value !== String(dvrSeconds())) mx.value = '1800';
-  mx.onchange = () => {
-    try { localStorage.setItem('iptv.dvr', mx.value); } catch {}
-    if (current) play(current);          // restart kanału z nową długością bufora
-  };
+  // nakładka z odtwarzaniem i cofaniem: dotknięcie obrazu pokazuje/ukrywa ją
   const dvr = $('dvr'), slider = $('dvrs'), lab = $('dvrl'), liveBtn = $('dvrlive');
   let hideT = 0, dragging = false, buffered = 0;
   const showDvr = () => { dvr.classList.add('show'); clearTimeout(hideT); hideT = setTimeout(() => { if (!dragging) dvr.classList.remove('show'); }, 6000); };
@@ -587,7 +630,19 @@ if (NATIVE) {
   $('v').addEventListener('click', () => dvr.classList.contains('show') ? dvr.classList.remove('show') : showDvr());
   dvr.querySelectorAll('button[data-d]').forEach(b => b.onclick = () => { NP.seekBy({ delta: +b.dataset.d }).catch(() => {}); showDvr(); });
   liveBtn.onclick = () => { NP.goLive().catch(() => {}); showDvr(); };
-  $('dvrpp').onclick = () => { NP.toggle().catch(() => {}); showDvr(); };
+  $('dvrpp').onclick = () => {
+    if (stopped && current) { stopped = false; play(current); }        // po „stop" start od nowa
+    else NP.toggle().catch(() => {});
+    showDvr();
+  };
+  $('dvrpip').onclick = () => { NP.enterPip().catch(() => {}); showDvr(); };
+  $('dvrfs').onclick = () => $('fs').click();
+  $('dvrstop').onclick = () => {
+    if (!current) return;
+    stopped = true; nstate = 'stopped';
+    NP.stop().catch(() => {});
+    paint(); showDvr();
+  };
   slider.addEventListener('input', () => { dragging = true; showDvr(); lab.textContent = '−' + fmt(buffered - slider.value) + ' za transmisją'; });
   slider.addEventListener('change', () => { dragging = false; NP.seekTo({ behind: buffered - slider.value }).catch(() => {}); showDvr(); });
   setInterval(async () => {
@@ -600,16 +655,17 @@ if (NATIVE) {
       slider.max = buffered;
       slider.value = Math.max(0, buffered - Math.round(st.behind));
       liveBtn.classList.toggle('on', st.live || st.behind < 10);
-      lab.textContent = !st.available ? 'cofanie niedostępne dla tego kanału'
-        : st.behind < 10 ? 'NA ŻYWO (bufor ' + fmt(st.buffered) + ')' : '−' + fmt(st.behind) + ' za transmisją';
+      lab.textContent = !st.available ? 'bez cofania'
+        : st.behind < 10 ? 'NA ŻYWO' : '−' + fmt(st.behind) + ' za transmisją';
     } catch {}
   }, 1000);
 }
 
 /* ---------- obraz w obrazie ---------- */
 const pipBtn = $('pip'), vid = $('v');
-if (!NATIVE && (document.pictureInPictureEnabled || vid.webkitSupportsPresentationMode)) pipBtn.hidden = false;
+if (NATIVE || document.pictureInPictureEnabled || vid.webkitSupportsPresentationMode) pipBtn.hidden = false;
 pipBtn.onclick = async () => {
+  if (NATIVE) { NP.enterPip().catch(() => {}); return; }
   try {
     if (document.pictureInPictureElement) await document.exitPictureInPicture();
     else if (document.pictureInPictureEnabled) await vid.requestPictureInPicture();
@@ -617,19 +673,9 @@ pipBtn.onclick = async () => {
   } catch (e) { alert('Obraz w obrazie niedostępny: ' + e.message); }
 };
 
-const mpop = $('mpop');
-const closeMenu = () => { mpop.hidden = true; $('menu').setAttribute('aria-expanded', 'false'); };
-$('menu').onclick = e => {
-  e.stopPropagation();
-  mpop.hidden = !mpop.hidden;
-  $('menu').setAttribute('aria-expanded', String(!mpop.hidden));
-  if (!mpop.hidden) $('m-file').focus();
-};
-document.addEventListener('click', e => { if (!mpop.hidden && !mpop.contains(e.target)) closeMenu(); });
-document.addEventListener('keydown', e => { if (e.key === 'Escape' && !mpop.hidden) { closeMenu(); $('menu').focus(); } });
-$('m-file').onclick = () => { closeMenu(); $('file').click(); };
+$('m-file').onclick = () => { closeSettings(); $('file').click(); };
 $('m-save').onclick = () => {
-  closeMenu();
+  closeSettings();
   const blob = new Blob([JSON.stringify(state, null, 1)], { type: 'application/json' });
   const l = document.createElement('a');
   l.href = URL.createObjectURL(blob); l.download = 'iptv-backup.json'; l.click();
@@ -645,8 +691,8 @@ $('file').onchange = async e => {
 
 (async function init() {
   loadState(); renderRecent();
-  if (state.pub) { if (state.urls[0]) $('url').value = state.urls[0]; loadPlaylist('public-channels.m3u', true); }
-  else if (state.urls[0]) { $('url').value = state.urls[0]; loadPlaylist(state.urls[0]); }
+  if (state.pub) loadPlaylist('public-channels.m3u', true);
+  else if (state.urls[0]) loadPlaylist(state.urls[0]);
   else if (state.favorites.length) { group = FAV; renderList(); }
 })();
 </script>
